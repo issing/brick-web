@@ -23,7 +23,7 @@ public class WebCommand extends UICommand {
 
     private HttpServletRequest request;
 
-    @Alias(Constants.BRICK_WEB_NAME)
+    @Alias(WebConstants.BRICK_WEB_NAME)
     @Ignore(mode = Mode.INCLUDE)
     private String webName;
 

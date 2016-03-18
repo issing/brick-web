@@ -52,14 +52,14 @@ public class BrickListener implements ServletContextListener {
      */
     private synchronized void initial(ServletContext context) {
         Asserts.state(
-                context.getAttribute(Constants.BRICK_WEB_MANAGER) == null,
+                context.getAttribute(WebConstants.BRICK_WEB_MANAGER) == null,
                 "Cannot initialize console because there is already a Brick console manager present - %s",
                 "check whether you have multiple definitions in your web.xml");
         context.log("Initializing Brick Console Manager");
         long startTime = System.currentTimeMillis();
         /* 创建管理器 */
         ConsoleManager manager = createConsoleManager(context);
-        context.setAttribute(Constants.BRICK_WEB_MANAGER, manager);
+        context.setAttribute(WebConstants.BRICK_WEB_MANAGER, manager);
         /* 加载容器 */
         manager.load();
         if (LOG.isDebugEnabled()) {
@@ -95,7 +95,7 @@ public class BrickListener implements ServletContextListener {
      */
     private Class<?> getManagerClass(ServletContext context) {
         return Reflects.getClass(Strings.empty(
-                context.getInitParameter(Constants.BRICK_WEB_MANAGER),
+                context.getInitParameter(WebConstants.BRICK_WEB_MANAGER),
                 ConsoleManager.class.getName()), Reflects.getClassLoader());
     }
 
@@ -107,9 +107,9 @@ public class BrickListener implements ServletContextListener {
      */
     private static String getWebName(ServletContext context) {
         return Strings.empty(
-                context.getInitParameter(Constants.BRICK_WEB_NAME), Strings
+                context.getInitParameter(WebConstants.BRICK_WEB_NAME), Strings
                         .empty(context.getContextPath().replaceAll("[/\\\\]+",
-                                ""), Constants.DEFAULT));
+                                ""), WebConstants.DEFAULT));
     }
 
     /**
@@ -122,11 +122,11 @@ public class BrickListener implements ServletContextListener {
         manager.getContainerProviders();
         manager.addContainerProvider(new ContainerProvider() {
             public void register(ContainerBuilder builder) {
-                builder.constant(Constants.BRICK_WEB_NAME, webName);
+                builder.constant(WebConstants.BRICK_WEB_NAME, webName);
                 builder.factory(WebCommand.class, webName);
-                builder.factory(Module.class, Constants.MOD_PLUGIN,
+                builder.factory(Module.class, WebConstants.MOD_PLUGIN,
                         UIPluginModule.class);
-                builder.factory(UIDesigner.class, Constants.MOD_PLUGIN);
+                builder.factory(UIDesigner.class, WebConstants.MOD_PLUGIN);
             }
 
             public boolean isReload() {
@@ -142,9 +142,7 @@ public class BrickListener implements ServletContextListener {
      * @return
      */
     public static Console getConsole(ServletContext context) {
-        Object manager = context.getAttribute(Constants.BRICK_WEB_MANAGER);
-        Asserts.isInstanceOf(ConsoleManager.class, manager,
-                "The brick console manager is not properly initialized");
+        Object manager = context.getAttribute(WebConstants.BRICK_WEB_MANAGER);
         return ((ConsoleManager) manager).getConsole();
     }
 
@@ -161,7 +159,7 @@ public class BrickListener implements ServletContextListener {
         Container container = getConsole(context).getContainer();
         /* 获取网名 */
         String webName = container.getInstance(String.class,
-                Constants.BRICK_WEB_NAME);
+                WebConstants.BRICK_WEB_NAME);
         /* 获取命令 */
         WebCommand command = container.getInstance(WebCommand.class, webName);
         command.initial(request, response);
@@ -185,7 +183,7 @@ public class BrickListener implements ServletContextListener {
         if (console != null) {
             console.destroy();
         }
-        context.removeAttribute(Constants.BRICK_WEB_MANAGER);
+        context.removeAttribute(WebConstants.BRICK_WEB_MANAGER);
     }
 
 }
