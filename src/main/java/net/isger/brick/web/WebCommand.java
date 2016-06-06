@@ -53,7 +53,7 @@ public class WebCommand extends UICommand {
         if (Strings.isNotEmpty(contextPath) && path.startsWith(contextPath)) {
             path = path.substring(contextPath.length());
         }
-        String[] target = (String[]) Helpers.copyArray(path.split("!"), 2);
+        String[] target = (String[]) Helpers.getArray(path.split("!"), 2);
         this.setName(Strings.empty(target[0].replaceFirst("/", "")
                 .replaceAll("[/]", "."), INDEX));
         this.setOperate(Strings.empty(target[1], SCREEN));
