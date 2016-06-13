@@ -17,9 +17,9 @@ import net.isger.util.anno.Ignore.Mode;
 @Ignore
 public class WebCommand extends UICommand {
 
-    private static final String INDEX = "index";
+    private static final String SCREEN_INDEX = "index";
 
-    private static final String SCREEN = "screen";
+    private static final String OPERATE_SCREEN = "screen";
 
     private HttpServletRequest request;
 
@@ -54,9 +54,9 @@ public class WebCommand extends UICommand {
             path = path.substring(contextPath.length());
         }
         String[] target = (String[]) Helpers.getArray(path.split("!"), 2);
-        this.setName(Strings.empty(target[0].replaceFirst("/", "")
-                .replaceAll("[/]", "."), INDEX));
-        this.setOperate(Strings.empty(target[1], SCREEN));
+        this.setScreen(Strings.empty(target[0].replaceFirst("/", "")
+                .replaceAll("[/]", "."), SCREEN_INDEX));
+        this.setOperate(Strings.empty(target[1], OPERATE_SCREEN));
     }
 
     /**
