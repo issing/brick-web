@@ -1,13 +1,16 @@
 package net.isger.brick.web;
 
+import java.io.UnsupportedEncodingException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import net.isger.brick.ui.UICommand;
+import net.isger.brick.ui.UIConstants;
 import net.isger.util.Helpers;
 import net.isger.util.Strings;
 import net.isger.util.anno.Alias;
@@ -17,11 +20,11 @@ import net.isger.util.anno.Ignore.Mode;
 @Ignore
 public class WebCommand extends UICommand {
 
-    private static final String SCREEN_INDEX = "index";
-
-    private static final String OPERATE_SCREEN = "screen";
+    private static final String NAME_INDEX = "index";
 
     private HttpServletRequest request;
+
+    private HttpSession session;
 
     @Alias(WebConstants.BRICK_WEB_NAME)
     @Ignore(mode = Mode.INCLUDE)
@@ -35,12 +38,14 @@ public class WebCommand extends UICommand {
      */
     void initial(HttpServletRequest request, HttpServletResponse response) {
         this.request = request;
+        this.session = request.getSession();
         makeTarget();
         makeParameters();
+        this.setIdentity(session.getId());
     }
 
     /**
-     * 制造目标
+     * 生成目标
      * 
      * @param request
      * @return
@@ -54,30 +59,41 @@ public class WebCommand extends UICommand {
             path = path.substring(contextPath.length());
         }
         String[] target = (String[]) Helpers.getArray(path.split("!"), 2);
-        this.setScreen(Strings.empty(target[0].replaceFirst("/", "")
-                .replaceAll("[/]", "."), SCREEN_INDEX));
-        this.setOperate(Strings.empty(target[1], OPERATE_SCREEN));
+        this.setName(Strings.empty(
+                target[0].replaceFirst("/", "").replaceAll("[/]", "."),
+                NAME_INDEX));
+        this.setOperate(Strings.empty(target[1], UIConstants.OPERATE_SCREEN));
     }
 
     /**
-     * 制造参数
+     * 生成参数
      */
     protected void makeParameters() {
+        String charset = request.getCharacterEncoding();
         /* 获取请求参数 */
         Map<String, Object> result = new HashMap<String, Object>();
         String name;
-        String[] values;
         Enumeration<?> names = request.getParameterNames();
         while (names.hasMoreElements()) {
             name = (String) names.nextElement();
-            values = request.getParameterValues(name);
-            if (values != null && values.length == 1) {
-                result.put(name, values[0]);
-            } else {
-                result.put(name, values);
-            }
+            result.put(name,
+                    toEncoding(charset, request.getParameterValues(name)));
         }
         setParameter(result);
     }
 
+    private Object toEncoding(String charset, String... values) {
+        int count = values.length;
+        if (count == 1) {
+            try {
+                return new String(values[0].getBytes("ISO-8859-1"), charset);
+            } catch (UnsupportedEncodingException e) {
+                return values[0];
+            }
+        }
+        for (int i = 0; i < count; i++) {
+            values[i] = (String) toEncoding(charset, values[i]);
+        }
+        return values;
+    }
 }

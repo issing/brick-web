@@ -22,6 +22,7 @@
 
   <properties>
     <servlet.version>2.5</servlet.version>
+    <shiro.version>1.2.4</shiro.version>
   </properties>
 
   <dependencies>
@@ -31,6 +32,17 @@
       <artifactId>servlet-api</artifactId>
       <version>${servlet.version}</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>javax.servlet</groupId>
+      <artifactId>servlet-api</artifactId>
+      <version>${servlet.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.shiro</groupId>
+      <artifactId>shiro-web</artifactId>
+      <version>${shiro.version}</version>
     </dependency>
     <!-- 砖头依赖 -->
     <dependency>

@@ -6,8 +6,14 @@ import javax.servlet.ServletContextListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import net.isger.brick.Constants;
+import net.isger.brick.auth.AuthCommand;
+import net.isger.brick.auth.AuthHelper;
+import net.isger.brick.auth.AuthModule;
+import net.isger.brick.core.BaseCommand;
 import net.isger.brick.core.Console;
 import net.isger.brick.core.ConsoleManager;
+import net.isger.brick.core.GateCommand;
 import net.isger.brick.core.Module;
 import net.isger.brick.inject.Container;
 import net.isger.brick.inject.ContainerBuilder;
@@ -30,6 +36,8 @@ import org.slf4j.LoggerFactory;
  */
 @Ignore
 public class BrickListener implements ServletContextListener {
+
+    private static final String KEY_AUTH_DOMAIN = "brick.auth.domain";
 
     private static final Logger LOG;
 
@@ -106,10 +114,10 @@ public class BrickListener implements ServletContextListener {
      * @return
      */
     private static String getWebName(ServletContext context) {
-        return Strings.empty(
-                context.getInitParameter(WebConstants.BRICK_WEB_NAME), Strings
-                        .empty(context.getContextPath().replaceAll("[/\\\\]+",
-                                ""), WebConstants.DEFAULT));
+        return Strings.empty(context
+                .getInitParameter(WebConstants.BRICK_WEB_NAME), Strings.empty(
+                context.getContextPath().replaceAll("[/\\\\]+", ""),
+                WebConstants.DEFAULT));
     }
 
     /**
@@ -147,13 +155,46 @@ public class BrickListener implements ServletContextListener {
     }
 
     /**
-     * 制造命令
+     * 访问命令（根据应用配置情况做认证包装）
      * 
      * @param request
      * @param response
      * @return
      */
-    public static WebCommand makeCommand(HttpServletRequest request,
+    public static BaseCommand makeCommand(HttpServletRequest request,
+            HttpServletResponse response) {
+        ServletContext context = request.getSession().getServletContext();
+        GateCommand token = makeWebCommand(request, response);
+        String domain = (String) context.getAttribute(KEY_AUTH_DOMAIN);
+        if (domain == null) {
+            Console console = getConsole(context);
+            AuthModule authModule = (AuthModule) console
+                    .getModule(Constants.MOD_AUTH);
+            if (authModule.getGate(domain = token.getDomain()) == null) {
+                if (authModule.getGate(domain = console.getModuleName(token)) == null) {
+                    domain = "";
+                }
+            }
+            context.setAttribute(KEY_AUTH_DOMAIN, domain);
+        }
+        /* 制作认证命令 */
+        if (Strings.isNotEmpty(domain)) {
+            AuthCommand cmd = AuthHelper.toCommand(token.getIdentity(), domain,
+                    token);
+            cmd.setOperate(AuthCommand.OPERATE_CHECK);
+            token = cmd;
+        }
+        return token;
+    }
+
+    /**
+     * 访问命令
+     * 
+     * @param request
+     * @param response
+     * @return
+     */
+    private static WebCommand makeWebCommand(HttpServletRequest request,
             HttpServletResponse response) {
         ServletContext context = request.getSession().getServletContext();
         Container container = getConsole(context).getContainer();
