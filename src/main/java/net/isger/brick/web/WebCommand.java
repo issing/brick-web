@@ -30,6 +30,10 @@ public class WebCommand extends UICommand {
     @Ignore(mode = Mode.INCLUDE)
     private String webName;
 
+    @Alias(WebConstants.BRICK_ENCODING)
+    @Ignore(mode = Mode.INCLUDE)
+    private String encoding;
+
     /**
      * 初始命令
      * 
@@ -58,7 +62,7 @@ public class WebCommand extends UICommand {
         if (Strings.isNotEmpty(contextPath) && path.startsWith(contextPath)) {
             path = path.substring(contextPath.length());
         }
-        String[] target = (String[]) Helpers.getArray(path.split("!"), 2);
+        String[] target = (String[]) Helpers.newArray(path.split("!"), 2);
         this.setName(Strings.empty(
                 target[0].replaceFirst("/", "").replaceAll("[/]", "."),
                 NAME_INDEX));
@@ -70,6 +74,9 @@ public class WebCommand extends UICommand {
      */
     protected void makeParameters() {
         String charset = request.getCharacterEncoding();
+        if ("GET".equalsIgnoreCase(request.getMethod())) {
+            charset = "ISO-8859-1";
+        }
         /* 获取请求参数 */
         Map<String, Object> result = new HashMap<String, Object>();
         String name;
@@ -84,16 +91,20 @@ public class WebCommand extends UICommand {
 
     private Object toEncoding(String charset, String... values) {
         int count = values.length;
-        if (count == 1) {
-            try {
-                return new String(values[0].getBytes("ISO-8859-1"), charset);
-            } catch (UnsupportedEncodingException e) {
-                return values[0];
+        if (!encoding.equalsIgnoreCase(charset)) {
+            for (int i = 0; i < count; i++) {
+                values[i] = newString(charset, values[i]);
             }
         }
-        for (int i = 0; i < count; i++) {
-            values[i] = (String) toEncoding(charset, values[i]);
-        }
-        return values;
+        return count == 1 ? values[0] : values;
     }
+
+    private String newString(String charset, String value) {
+        try {
+            return new String(value.getBytes(charset), encoding);
+        } catch (UnsupportedEncodingException e) {
+            return value;
+        }
+    }
+
 }
