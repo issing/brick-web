@@ -1,14 +1,19 @@
 package net.isger.brick.web;
 
+import java.io.File;
+import java.util.Map;
+
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import net.isger.brick.Constants;
 import net.isger.brick.auth.AuthCommand;
 import net.isger.brick.auth.AuthHelper;
+import net.isger.brick.auth.AuthIdentity;
 import net.isger.brick.auth.AuthModule;
 import net.isger.brick.core.BaseCommand;
 import net.isger.brick.core.Console;
@@ -59,7 +64,7 @@ public class BrickListener implements ServletContextListener {
      * @param context
      */
     private synchronized void initial(ServletContext context) {
-        Asserts.state(
+        Asserts.throwState(
                 context.getAttribute(WebConstants.BRICK_WEB_MANAGER) == null,
                 "Cannot initialize console because there is already a Brick console manager present - %s",
                 "check whether you have multiple definitions in your web.xml");
@@ -91,7 +96,7 @@ public class BrickListener implements ServletContextListener {
         ConsoleManager manager = (ConsoleManager) Reflects
                 .newInstance(managerClass);
         /* 添加供应容器 */
-        addContainerProviders(manager, getWebName(context));
+        addContainerProviders(manager, context);
         return manager;
     }
 
@@ -108,29 +113,19 @@ public class BrickListener implements ServletContextListener {
     }
 
     /**
-     * 获取网名
-     * 
-     * @param context
-     * @return
-     */
-    private static String getWebName(ServletContext context) {
-        return Strings.empty(context
-                .getInitParameter(WebConstants.BRICK_WEB_NAME), Strings.empty(
-                context.getContextPath().replaceAll("[/\\\\]+", ""),
-                WebConstants.DEFAULT));
-    }
-
-    /**
      * 添加供应容器
      * 
      * @param manager
      */
     private void addContainerProviders(ConsoleManager manager,
-            final String webName) {
-        manager.getContainerProviders();
+            ServletContext context) {
+        final String webName = getWebName(context);
+        final String webPath = new File(context.getRealPath("./"))
+                .getAbsolutePath();
         manager.addContainerProvider(new ContainerProvider() {
             public void register(ContainerBuilder builder) {
                 builder.constant(WebConstants.BRICK_WEB_NAME, webName);
+                builder.constant(WebConstants.BRICK_WEB_PATH, webPath);
                 builder.factory(WebCommand.class, webName);
                 builder.factory(Module.class, WebConstants.MOD_PLUGIN,
                         UIPluginModule.class);
@@ -141,6 +136,19 @@ public class BrickListener implements ServletContextListener {
                 return false;
             }
         });
+    }
+
+    /**
+     * 获取网名
+     * 
+     * @param context
+     * @return
+     */
+    public static String getWebName(ServletContext context) {
+        return Strings.empty(context
+                .getInitParameter(WebConstants.BRICK_WEB_NAME), Strings.empty(
+                context.getContextPath().replaceAll("[/\\\\]+", ""),
+                WebConstants.DEFAULT));
     }
 
     /**
@@ -159,12 +167,13 @@ public class BrickListener implements ServletContextListener {
      * 
      * @param request
      * @param response
+     * @param parameters
      * @return
      */
     public static BaseCommand makeCommand(HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response, Map<String, Object> parameters) {
         ServletContext context = request.getSession().getServletContext();
-        GateCommand token = makeWebCommand(request, response);
+        GateCommand token = makeWebCommand(request, response, parameters);
         String domain = (String) context.getAttribute(KEY_AUTH_DOMAIN);
         if (domain == null) {
             Console console = getConsole(context);
@@ -192,10 +201,11 @@ public class BrickListener implements ServletContextListener {
      * 
      * @param request
      * @param response
+     * @param parameters
      * @return
      */
     private static WebCommand makeWebCommand(HttpServletRequest request,
-            HttpServletResponse response) {
+            HttpServletResponse response, Map<String, Object> parameters) {
         ServletContext context = request.getSession().getServletContext();
         Container container = getConsole(context).getContainer();
         /* 获取网名 */
@@ -203,8 +213,26 @@ public class BrickListener implements ServletContextListener {
                 WebConstants.BRICK_WEB_NAME);
         /* 获取命令 */
         WebCommand command = container.getInstance(WebCommand.class, webName);
-        command.initial(request, response);
+        command.initial(request, response, parameters);
+        /* 设置权限会话 */
+        command.setIdentity(getIdentity(request.getSession()));
         return command;
+    }
+
+    /**
+     * 获取身份
+     * 
+     * @param session
+     * @return
+     */
+    public static AuthIdentity getIdentity(HttpSession session) {
+        AuthIdentity identity = (AuthIdentity) session
+                .getAttribute(BaseCommand.KEY_IDENTITY);
+        if (identity == null) {
+            session.setAttribute(BaseCommand.KEY_IDENTITY,
+                    identity = new WebIdentity(session));
+        }
+        return identity;
     }
 
     /**

@@ -4,10 +4,10 @@ import java.io.UnsupportedEncodingException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import net.isger.brick.ui.UICommand;
 import net.isger.brick.ui.UIConstants;
@@ -17,14 +17,14 @@ import net.isger.util.anno.Alias;
 import net.isger.util.anno.Ignore;
 import net.isger.util.anno.Ignore.Mode;
 
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
+
 @Ignore
 public class WebCommand extends UICommand {
 
     private static final String NAME_INDEX = "index";
 
     private HttpServletRequest request;
-
-    private HttpSession session;
 
     @Alias(WebConstants.BRICK_WEB_NAME)
     @Ignore(mode = Mode.INCLUDE)
@@ -34,18 +34,41 @@ public class WebCommand extends UICommand {
     @Ignore(mode = Mode.INCLUDE)
     private String encoding;
 
+    // @Alias(WebConstants.BRICK_UPLOAD_THRESHOLD)
+    // @Ignore(mode = Mode.INCLUDE)
+    // private Integer uploadThreshold;
+    //
+    // @Alias(WebConstants.BRICK_UPLOAD_FILESIZE)
+    // @Ignore(mode = Mode.INCLUDE)
+    // private Long uploadFileSize;
+    //
+    // @Alias(WebConstants.BRICK_UPLOAD_REQUESTSIZE)
+    // @Ignore(mode = Mode.INCLUDE)
+    // private Long uploadRequestSize;
+    //
+    // @Alias(WebConstants.BRICK_UPLOAD_PATH)
+    // @Ignore(mode = Mode.INCLUDE)
+    // private String uploadPath;
+
+    public WebCommand() {
+        // this.uploadThreshold = 1024 * 1024 * 4; // 4M
+        // this.uploadFileSize = 1024 * 1024 * 40l; // 40M
+        // this.uploadRequestSize = 1024 * 1024 * 40l; // 40M
+        // this.uploadPath = "upload";
+    }
+
     /**
      * 初始命令
      * 
      * @param request
      * @param response
+     * @param parameters
      */
-    void initial(HttpServletRequest request, HttpServletResponse response) {
+    void initial(HttpServletRequest request, HttpServletResponse response,
+            Map<String, Object> parameters) {
         this.request = request;
-        this.session = request.getSession();
         makeTarget();
-        makeParameters();
-        this.setIdentity(session.getId());
+        makeParameters(parameters);
     }
 
     /**
@@ -71,23 +94,86 @@ public class WebCommand extends UICommand {
 
     /**
      * 生成参数
+     * 
+     * @param parameters
      */
-    protected void makeParameters() {
+    protected void makeParameters(Map<String, Object> parameters) {
         String charset = request.getCharacterEncoding();
         if ("GET".equalsIgnoreCase(request.getMethod())) {
             charset = "ISO-8859-1";
         }
         /* 获取请求参数 */
         Map<String, Object> result = new HashMap<String, Object>();
-        String name;
-        Enumeration<?> names = request.getParameterNames();
-        while (names.hasMoreElements()) {
-            name = (String) names.nextElement();
-            result.put(name,
-                    toEncoding(charset, request.getParameterValues(name)));
+        if (parameters == null) {
+            Enumeration<?> names = request.getParameterNames();
+            while (names.hasMoreElements()) {
+                String name = (String) names.nextElement();
+                result.put(name,
+                        toEncoding(charset, request.getParameterValues(name)));
+            }
+            if (ServletFileUpload.isMultipartContent(request)) {
+                // toMultipart();
+                throw new IllegalStateException(
+                        "Unimplements multipart process");
+            }
+        } else {
+            Object value;
+            for (Entry<String, Object> param : parameters.entrySet()) {
+                value = param.getValue();
+                if (value instanceof String[]) {
+                    value = toEncoding(charset, (String[]) value);
+                }
+                result.put(param.getKey(), Helpers.up(value));
+            }
         }
         setParameter(result);
     }
+
+    /**
+     * 分部请求
+     */
+    // private void toMultipart() {
+    // DiskFileItemFactory factory = new DiskFileItemFactory();
+    // // 设置内存临界值 - 超过后将产生临时文件并存储于临时目录中
+    // factory.setSizeThreshold(uploadThreshold);
+    // // 设置临时存储目录
+    // factory.setRepository(new File(System.getProperty("java.io.tmpdir")));
+    // // 文件上传参数设置
+    // ServletFileUpload upload = new ServletFileUpload(factory);
+    // upload.setFileSizeMax(uploadFileSize);
+    // upload.setSizeMax(uploadRequestSize);
+    // File uploadDirectory = new File(uploadPath);
+    // if (!uploadDirectory.isAbsolute()) {
+    // uploadDirectory = new File(uploadPath = request.getSession()
+    // .getServletContext().getRealPath("./WEB-INF")
+    // + File.separator + uploadPath);
+    // }
+    // if (!uploadDirectory.exists()) {
+    // uploadDirectory.mkdirs();
+    // }
+    // try {
+    // // 解析请求的内容提取文件数据
+    // File storeFile;
+    // List<FileItem> formItems = upload.parseRequest(request);
+    // if (formItems.size() > 0) {
+    // // 迭代表单数据
+    // for (FileItem item : formItems) {
+    // // 处理不在表单中的字段
+    // if (!item.isFormField()) {
+    // storeFile = new File(uploadDirectory, new File(
+    // item.getName()).getName());
+    // // 保存文件到硬盘
+    // item.write(storeFile);
+    // // TODO 多文件上传问题
+    // setParameter(storeFile.getName(), storeFile);
+    // }
+    // }
+    // }
+    // } catch (Exception e) {
+    // throw new IllegalStateException("Failure to process "
+    // + request.getContentType(), e);
+    // }
+    // }
 
     private Object toEncoding(String charset, String... values) {
         int count = values.length;
