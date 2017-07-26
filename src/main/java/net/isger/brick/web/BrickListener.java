@@ -10,6 +10,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.isger.brick.Constants;
 import net.isger.brick.auth.AuthCommand;
 import net.isger.brick.auth.AuthHelper;
@@ -29,9 +32,6 @@ import net.isger.util.Asserts;
 import net.isger.util.Reflects;
 import net.isger.util.Strings;
 import net.isger.util.anno.Ignore;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Brick容器监听器
@@ -107,9 +107,12 @@ public class BrickListener implements ServletContextListener {
      * @return
      */
     private Class<?> getManagerClass(ServletContext context) {
-        return Reflects.getClass(Strings.empty(
-                context.getInitParameter(WebConstants.BRICK_WEB_MANAGER),
-                ConsoleManager.class.getName()), Reflects.getClassLoader());
+        return Reflects.getClass(
+                Strings.empty(
+                        context.getInitParameter(
+                                WebConstants.BRICK_WEB_MANAGER),
+                        ConsoleManager.class.getName()),
+                Reflects.getClassLoader());
     }
 
     /**
@@ -117,11 +120,14 @@ public class BrickListener implements ServletContextListener {
      * 
      * @param manager
      */
+    @SuppressWarnings("unchecked")
     private void addContainerProviders(ConsoleManager manager,
             ServletContext context) {
         final String webName = getWebName(context);
         final String webPath = new File(context.getRealPath("./"))
                 .getAbsolutePath();
+        final Object wsc = context
+                .getAttribute("javax.websocket.server.ServerContainer");
         manager.addContainerProvider(new ContainerProvider() {
             public void register(ContainerBuilder builder) {
                 builder.constant(WebConstants.BRICK_WEB_NAME, webName);
@@ -130,6 +136,12 @@ public class BrickListener implements ServletContextListener {
                 builder.factory(Module.class, WebConstants.MOD_PLUGIN,
                         UIPluginModule.class);
                 builder.factory(UIDesigner.class, WebConstants.MOD_PLUGIN);
+                if (wsc != null) {
+                    builder.constant(
+                            (Class<Object>) Reflects.getClass(
+                                    "javax.websocket.server.ServerContainer"),
+                            Constants.SYSTEM, wsc);
+                }
             }
 
             public boolean isReload() {
@@ -145,10 +157,11 @@ public class BrickListener implements ServletContextListener {
      * @return
      */
     public static String getWebName(ServletContext context) {
-        return Strings.empty(context
-                .getInitParameter(WebConstants.BRICK_WEB_NAME), Strings.empty(
-                context.getContextPath().replaceAll("[/\\\\]+", ""),
-                WebConstants.DEFAULT));
+        return Strings.empty(
+                context.getInitParameter(WebConstants.BRICK_WEB_NAME),
+                Strings.empty(
+                        context.getContextPath().replaceAll("[/\\\\]+", ""),
+                        WebConstants.DEFAULT));
     }
 
     /**
@@ -180,7 +193,8 @@ public class BrickListener implements ServletContextListener {
             AuthModule authModule = (AuthModule) console
                     .getModule(Constants.MOD_AUTH);
             if (authModule.getGate(domain = token.getDomain()) == null) {
-                if (authModule.getGate(domain = console.getModuleName(token)) == null) {
+                if (authModule.getGate(
+                        domain = console.getModuleName(token)) == null) {
                     domain = "";
                 }
             }

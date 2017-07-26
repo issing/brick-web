@@ -16,4 +16,6 @@ public interface WebConstants extends net.isger.brick.StandardConstants {
 
     public static final String BRICK_UPLOAD_PATH = "brick.upload.path";
 
+    public static final String BRICK_WEBSOCKET_SESSION = "brick.websocket.session";
+
 }

@@ -5,6 +5,7 @@ import java.util.Enumeration;
 import javax.servlet.http.HttpSession;
 
 import net.isger.brick.auth.AuthIdentity;
+import net.isger.brick.auth.AuthToken;
 
 public class WebIdentity extends AuthIdentity {
 
@@ -14,7 +15,7 @@ public class WebIdentity extends AuthIdentity {
         this(null, session);
     }
 
-    public WebIdentity(Object token, HttpSession session) {
+    public WebIdentity(AuthToken<?> token, HttpSession session) {
         super(token);
         this.session = session;
     }
@@ -24,7 +25,11 @@ public class WebIdentity extends AuthIdentity {
     }
 
     public void setAttribute(String name, Object value) {
-        session.setAttribute(name, value);
+        if (value == null) {
+            session.removeAttribute(name);
+        } else {
+            session.setAttribute(name, value);
+        }
     }
 
     public void clear() {
