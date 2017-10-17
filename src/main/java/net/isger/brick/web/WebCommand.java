@@ -123,7 +123,7 @@ public class WebCommand extends UICommand {
                 if (value instanceof String[]) {
                     value = toEncoding(charset, (String[]) value);
                 }
-                result.put(param.getKey(), Helpers.up(value));
+                result.put(param.getKey(), Helpers.compact(value));
             }
         }
         setParameter(result);
