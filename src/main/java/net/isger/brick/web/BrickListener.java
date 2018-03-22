@@ -42,6 +42,8 @@ import net.isger.util.anno.Ignore;
 @Ignore
 public class BrickListener implements ServletContextListener {
 
+    private static final String REGEX_MOBILE_DEVICE = ".*(android|webos|ios|iphone|ipod|blackberry|phone).*";
+
     private static final String KEY_AUTH_DOMAIN = "brick.auth.domain";
 
     private static final Logger LOG;
@@ -185,6 +187,9 @@ public class BrickListener implements ServletContextListener {
      */
     public static BaseCommand makeCommand(HttpServletRequest request,
             HttpServletResponse response, Map<String, Object> parameters) {
+        request.setAttribute(WebConstants.BRICK_WEB_MOBILE,
+                request.getHeader("user-agent").toLowerCase()
+                        .matches(REGEX_MOBILE_DEVICE));
         ServletContext context = request.getSession().getServletContext();
         GateCommand token = makeWebCommand(request, response, parameters);
         String domain = (String) context.getAttribute(KEY_AUTH_DOMAIN);
@@ -229,22 +234,23 @@ public class BrickListener implements ServletContextListener {
         WebCommand command = container.getInstance(WebCommand.class, webName);
         command.initial(request, response, parameters);
         /* 设置权限会话 */
-        command.setIdentity(getIdentity(request.getSession()));
+        command.setIdentity(getIdentity(request));
         return command;
     }
 
     /**
      * 获取身份
      * 
-     * @param session
+     * @param request
      * @return
      */
-    public static AuthIdentity getIdentity(HttpSession session) {
+    public static AuthIdentity getIdentity(HttpServletRequest request) {
+        HttpSession session = request.getSession();
         AuthIdentity identity = (AuthIdentity) session
-                .getAttribute(BaseCommand.KEY_IDENTITY);
+                .getAttribute(BaseCommand.CTRL_IDENTITY);
         if (identity == null) {
-            session.setAttribute(BaseCommand.KEY_IDENTITY,
-                    identity = new WebIdentity(session));
+            session.setAttribute(BaseCommand.CTRL_IDENTITY,
+                    identity = new WebIdentity(request));
         }
         return identity;
     }

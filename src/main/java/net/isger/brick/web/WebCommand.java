@@ -9,6 +9,8 @@ import java.util.Map.Entry;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.fileupload.servlet.ServletFileUpload;
+
 import net.isger.brick.ui.UICommand;
 import net.isger.brick.ui.UIConstants;
 import net.isger.util.Helpers;
@@ -16,8 +18,6 @@ import net.isger.util.Strings;
 import net.isger.util.anno.Alias;
 import net.isger.util.anno.Ignore;
 import net.isger.util.anno.Ignore.Mode;
-
-import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 @Ignore
 public class WebCommand extends UICommand {
@@ -78,18 +78,33 @@ public class WebCommand extends UICommand {
      * @return
      */
     protected void makeTarget() {
-        this.setDomain(webName);
+        String domain;
         String contextPath = request.getContextPath().replaceAll("[/\\\\]+",
                 "/");
         String path = request.getRequestURI().replaceAll("[/\\\\]+", "/");
-        if (Strings.isNotEmpty(contextPath) && path.startsWith(contextPath)) {
+        String[] pending = path.split("[:]");
+        if (pending.length > 1) {
+            domain = (contextPath.length() > 0
+                    ? pending[0].substring(contextPath.length())
+                    : pending[0]).replaceFirst("[/]", "");
+            path = Strings.append(pending, 1);
+        } else if (Strings.isEmpty(contextPath)) {
+            domain = webName;
+        } else {
+            if (WebConstants.DEFAULT.equals(webName)) {
+                domain = contextPath.replaceFirst("[/]", "");
+            } else {
+                domain = webName;
+            }
             path = path.substring(contextPath.length());
         }
-        String[] target = (String[]) Helpers.newArray(path.split("!"), 2);
+        this.setDomain(domain);
+
+        pending = (String[]) Helpers.newArray(path.split("!"), 2);
         this.setName(Strings.empty(
-                target[0].replaceFirst("/", "").replaceAll("[/]", "."),
+                pending[0].replaceFirst("/", "").replaceAll("[/]", "."),
                 NAME_INDEX));
-        this.setOperate(Strings.empty(target[1], UIConstants.OPERATE_SCREEN));
+        this.setOperate(Strings.empty(pending[1], UIConstants.OPERATE_SCREEN));
     }
 
     /**

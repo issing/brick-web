@@ -18,4 +18,6 @@ public interface WebConstants extends net.isger.brick.StandardConstants {
 
     public static final String BRICK_WEBSOCKET_SESSION = "brick.websocket.session";
 
+    public static final String BRICK_WEB_MOBILE = "brick.web.mobile";
+
 }
