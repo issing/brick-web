@@ -7,6 +7,7 @@ import javax.servlet.http.HttpSession;
 
 import net.isger.brick.auth.AuthIdentity;
 import net.isger.brick.auth.AuthToken;
+import net.isger.brick.core.BaseCommand;
 
 public class WebIdentity extends AuthIdentity {
 
@@ -22,6 +23,7 @@ public class WebIdentity extends AuthIdentity {
         super(token);
         this.request = request;
         this.active(true);
+        this.session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
     }
 
     public Object getAttribute(String name) {
@@ -43,10 +45,21 @@ public class WebIdentity extends AuthIdentity {
 
     public void clear() {
         super.clear();
-        Enumeration<?> es = session.getAttributeNames();
+        Enumeration<?> es = this.session.getAttributeNames();
         while (es.hasMoreElements()) {
-            session.removeAttribute((String) es.nextElement());
+            this.session.removeAttribute((String) es.nextElement());
         }
+        this.session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
+    }
+
+    public static WebIdentity take(HttpServletRequest request) {
+        HttpSession session = request.getSession();
+        WebIdentity identity = (WebIdentity) session
+                .getAttribute(BaseCommand.CTRL_IDENTITY);
+        if (identity == null) {
+            identity = new WebIdentity(request);
+        }
+        return identity;
     }
 
 }

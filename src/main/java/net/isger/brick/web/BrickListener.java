@@ -8,7 +8,6 @@ import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.servlet.http.HttpSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +15,6 @@ import org.slf4j.LoggerFactory;
 import net.isger.brick.Constants;
 import net.isger.brick.auth.AuthCommand;
 import net.isger.brick.auth.AuthHelper;
-import net.isger.brick.auth.AuthIdentity;
 import net.isger.brick.auth.AuthModule;
 import net.isger.brick.core.BaseCommand;
 import net.isger.brick.core.Console;
@@ -234,25 +232,8 @@ public class BrickListener implements ServletContextListener {
         WebCommand command = container.getInstance(WebCommand.class, webName);
         command.initial(request, response, parameters);
         /* 设置权限会话 */
-        command.setIdentity(getIdentity(request));
+        command.setIdentity(WebIdentity.take(request));
         return command;
-    }
-
-    /**
-     * 获取身份
-     * 
-     * @param request
-     * @return
-     */
-    public static AuthIdentity getIdentity(HttpServletRequest request) {
-        HttpSession session = request.getSession();
-        AuthIdentity identity = (AuthIdentity) session
-                .getAttribute(BaseCommand.CTRL_IDENTITY);
-        if (identity == null) {
-            session.setAttribute(BaseCommand.CTRL_IDENTITY,
-                    identity = new WebIdentity(request));
-        }
-        return identity;
     }
 
     /**
