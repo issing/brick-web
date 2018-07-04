@@ -194,7 +194,8 @@ public class WebCommand extends UICommand {
         int count = values.length;
         if (!encoding.equalsIgnoreCase(charset)) {
             for (int i = 0; i < count; i++) {
-                values[i] = newString(charset, values[i]);
+                values[i] = "ISO-8859-1".equals(charset) ? values[i]
+                        : newString(charset, values[i]);
             }
         }
         return count == 1 ? values[0] : values;
