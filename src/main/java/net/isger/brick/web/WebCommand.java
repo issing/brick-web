@@ -87,7 +87,7 @@ public class WebCommand extends UICommand {
             domain = (contextPath.length() > 0
                     ? pending[0].substring(contextPath.length())
                     : pending[0]).replaceFirst("[/]", "");
-            path = Strings.join(pending, 1);
+            path = Strings.join(false, pending, 1);
         } else if (Strings.isEmpty(contextPath)) {
             domain = webName;
         } else {
