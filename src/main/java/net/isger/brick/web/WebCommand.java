@@ -22,9 +22,13 @@ import net.isger.util.anno.Ignore.Mode;
 @Ignore
 public class WebCommand extends UICommand {
 
+    public static final String BRICK_WEB_PREFIX = "brick-web:";
+
     private static final String NAME_INDEX = "index";
 
     private HttpServletRequest request;
+
+    private HttpServletResponse response;
 
     @Alias(WebConstants.BRICK_WEB_NAME)
     @Ignore(mode = Mode.INCLUDE)
@@ -67,6 +71,7 @@ public class WebCommand extends UICommand {
     void initial(HttpServletRequest request, HttpServletResponse response,
             Map<String, Object> parameters) {
         this.request = request;
+        this.response = response;
         makeTarget();
         makeParameters(parameters);
     }
@@ -207,6 +212,18 @@ public class WebCommand extends UICommand {
         } catch (UnsupportedEncodingException e) {
             return value;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T getHeader(CharSequence key) {
+        if (String.valueOf(key).startsWith(BRICK_WEB_PREFIX)) {
+            if ((BRICK_WEB_PREFIX + "request").equals(key)) {
+                return (T) request;
+            } else if ((BRICK_WEB_PREFIX + "response").equals(key)) {
+                return (T) response;
+            }
+        }
+        return super.getHeader(key);
     }
 
 }
