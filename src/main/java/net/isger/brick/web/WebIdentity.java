@@ -43,6 +43,10 @@ public class WebIdentity extends AuthIdentity {
         this.session = request.getSession(create);
     }
 
+    public void setTimeout(int timeout) {
+        this.session.setMaxInactiveInterval(timeout);
+    }
+
     public void clear() {
         super.clear();
         Enumeration<?> es = this.session.getAttributeNames();
