@@ -22,8 +22,7 @@ public class WebIdentity extends AuthIdentity {
     public WebIdentity(AuthToken<?> token, HttpServletRequest request) {
         super(token);
         this.request = request;
-        this.active(true);
-        this.session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
+        active(true);
     }
 
     public Object getAttribute(String name) {
@@ -40,26 +39,26 @@ public class WebIdentity extends AuthIdentity {
 
     public void active(boolean create) {
         super.active(create);
-        this.session = request.getSession(create);
+        session = request.getSession(create);
+        session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
     }
 
     public void setTimeout(int timeout) {
-        this.session.setMaxInactiveInterval(timeout);
+        session.setMaxInactiveInterval(timeout);
     }
 
     public void clear() {
         super.clear();
-        Enumeration<?> es = this.session.getAttributeNames();
+        Enumeration<?> es = session.getAttributeNames();
         while (es.hasMoreElements()) {
-            this.session.removeAttribute((String) es.nextElement());
+            session.removeAttribute((String) es.nextElement());
         }
-        this.session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
+        session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
     }
 
     public static WebIdentity take(HttpServletRequest request) {
         HttpSession session = request.getSession();
-        WebIdentity identity = (WebIdentity) session
-                .getAttribute(BaseCommand.CTRL_IDENTITY);
+        WebIdentity identity = (WebIdentity) session.getAttribute(BaseCommand.CTRL_IDENTITY);
         if (identity == null) {
             identity = new WebIdentity(request);
         }

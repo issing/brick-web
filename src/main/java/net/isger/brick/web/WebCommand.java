@@ -68,8 +68,7 @@ public class WebCommand extends UICommand {
      * @param response
      * @param parameters
      */
-    void initial(HttpServletRequest request, HttpServletResponse response,
-            Map<String, Object> parameters) {
+    void initial(HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) {
         this.request = request;
         this.response = response;
         makeTarget();
@@ -84,14 +83,11 @@ public class WebCommand extends UICommand {
      */
     protected void makeTarget() {
         String domain;
-        String contextPath = request.getContextPath().replaceAll("[/\\\\]+",
-                "/");
+        String contextPath = request.getContextPath().replaceAll("[/\\\\]+", "/");
         String path = request.getRequestURI().replaceAll("[/\\\\]+", "/");
         String[] pending = path.split("[:]");
         if (pending.length > 1) {
-            domain = (contextPath.length() > 0
-                    ? pending[0].substring(contextPath.length())
-                    : pending[0]).replaceFirst("[/]", "");
+            domain = (contextPath.length() > 0 ? pending[0].substring(contextPath.length()) : pending[0]).replaceFirst("[/]", "");
             path = Strings.join(false, pending, 1);
         } else if (Strings.isEmpty(contextPath)) {
             domain = webName;
@@ -106,9 +102,7 @@ public class WebCommand extends UICommand {
         this.setDomain(domain);
 
         pending = (String[]) Helpers.newArray(path.split("!"), 2);
-        this.setName(Strings.empty(
-                pending[0].replaceFirst("/", "").replaceAll("[/]", "."),
-                NAME_INDEX));
+        this.setName(Strings.empty(pending[0].replaceFirst("/", "").replaceAll("[/]", "."), NAME_INDEX));
         this.setOperate(Strings.empty(pending[1], UIConstants.OPERATE_SCREEN));
     }
 
@@ -128,13 +122,11 @@ public class WebCommand extends UICommand {
             Enumeration<?> names = request.getParameterNames();
             while (names.hasMoreElements()) {
                 String name = (String) names.nextElement();
-                result.put(name,
-                        toEncoding(charset, request.getParameterValues(name)));
+                result.put(name, toEncoding(charset, request.getParameterValues(name)));
             }
             if (ServletFileUpload.isMultipartContent(request)) {
                 // toMultipart();
-                throw new IllegalStateException(
-                        "Unimplements multipart process");
+                throw new IllegalStateException("Unimplements multipart process");
             }
         } else {
             Object value;
@@ -199,8 +191,7 @@ public class WebCommand extends UICommand {
         int count = values.length;
         if (!encoding.equalsIgnoreCase(charset)) {
             for (int i = 0; i < count; i++) {
-                values[i] = "ISO-8859-1".equals(charset) ? values[i]
-                        : newString(charset, values[i]);
+                values[i] = "ISO-8859-1".equals(charset) ? values[i] : newString(charset, values[i]);
             }
         }
         return count == 1 ? values[0] : values;

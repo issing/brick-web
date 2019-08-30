@@ -64,10 +64,7 @@ public class BrickListener implements ServletContextListener {
      * @param context
      */
     private synchronized void initial(ServletContext context) {
-        Asserts.throwState(
-                context.getAttribute(WebConstants.BRICK_WEB_MANAGER) == null,
-                "Cannot initialize console because there is already a Brick console manager present - %s",
-                "check whether you have multiple definitions in your web.xml");
+        Asserts.throwState(context.getAttribute(WebConstants.BRICK_WEB_MANAGER) == null, "Cannot initialize console because there is already a Brick console manager present - %s", "check whether you have multiple definitions in your web.xml");
         context.log("Initializing Brick Console Manager");
         long startTime = System.currentTimeMillis();
         /* 创建管理器 */
@@ -76,8 +73,7 @@ public class BrickListener implements ServletContextListener {
         /* 加载容器 */
         manager.load();
         if (LOG.isDebugEnabled()) {
-            LOG.info("Initialization completed in {} ms",
-                    System.currentTimeMillis() - startTime);
+            LOG.info("Initialization completed in {} ms", System.currentTimeMillis() - startTime);
         }
     }
 
@@ -90,11 +86,8 @@ public class BrickListener implements ServletContextListener {
     protected ConsoleManager createConsoleManager(ServletContext context) {
         /* 获取配置管理器 */
         Class<?> managerClass = getManagerClass(context);
-        Asserts.isAssignable(ConsoleManager.class, managerClass,
-                "Custom console manager [%s] is not of [%s]", managerClass,
-                ConsoleManager.class);
-        ConsoleManager manager = (ConsoleManager) Reflects
-                .newInstance(managerClass);
+        Asserts.isAssignable(ConsoleManager.class, managerClass, "Custom console manager [%s] is not of [%s]", managerClass, ConsoleManager.class);
+        ConsoleManager manager = (ConsoleManager) Reflects.newInstance(managerClass);
         /* 添加供应容器 */
         addContainerProviders(manager, context);
         return manager;
@@ -107,12 +100,7 @@ public class BrickListener implements ServletContextListener {
      * @return
      */
     private Class<?> getManagerClass(ServletContext context) {
-        return Reflects.getClass(
-                Strings.empty(
-                        context.getInitParameter(
-                                WebConstants.BRICK_WEB_MANAGER),
-                        ConsoleManager.class.getName()),
-                Reflects.getClassLoader());
+        return Reflects.getClass(Strings.empty(context.getInitParameter(WebConstants.BRICK_WEB_MANAGER), ConsoleManager.class.getName()), Reflects.getClassLoader());
     }
 
     /**
@@ -121,26 +109,19 @@ public class BrickListener implements ServletContextListener {
      * @param manager
      */
     @SuppressWarnings("unchecked")
-    private void addContainerProviders(ConsoleManager manager,
-            ServletContext context) {
+    private void addContainerProviders(ConsoleManager manager, ServletContext context) {
         final String webName = getWebName(context);
-        final String webPath = new File(context.getRealPath("./"))
-                .getAbsolutePath();
-        final Object wsc = context
-                .getAttribute("javax.websocket.server.ServerContainer");
+        final String webPath = new File(context.getRealPath("./")).getAbsolutePath();
+        final Object wsc = context.getAttribute("javax.websocket.server.ServerContainer");
         manager.addContainerProvider(new ContainerProvider() {
             public void register(ContainerBuilder builder) {
                 builder.constant(WebConstants.BRICK_WEB_NAME, webName);
                 builder.constant(WebConstants.BRICK_WEB_PATH, webPath);
                 builder.factory(WebCommand.class, webName);
-                builder.factory(Module.class, WebConstants.MOD_PLUGIN,
-                        UIPluginModule.class);
+                builder.factory(Module.class, WebConstants.MOD_PLUGIN, UIPluginModule.class);
                 builder.factory(UIDesigner.class, WebConstants.MOD_PLUGIN);
                 if (wsc != null) {
-                    builder.constant(
-                            (Class<Object>) Reflects.getClass(
-                                    "javax.websocket.server.ServerContainer"),
-                            Constants.SYSTEM, wsc);
+                    builder.constant((Class<Object>) Reflects.getClass("javax.websocket.server.ServerContainer"), Constants.SYSTEM, wsc);
                 }
             }
 
@@ -157,11 +138,7 @@ public class BrickListener implements ServletContextListener {
      * @return
      */
     public static String getWebName(ServletContext context) {
-        return Strings.empty(
-                context.getInitParameter(WebConstants.BRICK_WEB_NAME),
-                Strings.empty(
-                        context.getContextPath().replaceAll("[/\\\\]+", ""),
-                        WebConstants.DEFAULT));
+        return Strings.empty(context.getInitParameter(WebConstants.BRICK_WEB_NAME), Strings.empty(context.getContextPath().replaceAll("[/\\\\]+", ""), WebConstants.DEFAULT));
     }
 
     /**
@@ -183,21 +160,16 @@ public class BrickListener implements ServletContextListener {
      * @param parameters
      * @return
      */
-    public static BaseCommand makeCommand(HttpServletRequest request,
-            HttpServletResponse response, Map<String, Object> parameters) {
-        request.setAttribute(WebConstants.BRICK_WEB_MOBILE,
-                request.getHeader("user-agent").toLowerCase()
-                        .matches(REGEX_MOBILE_DEVICE));
+    public static BaseCommand makeCommand(HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) {
+        request.setAttribute(WebConstants.BRICK_WEB_MOBILE, request.getHeader("user-agent").toLowerCase().matches(REGEX_MOBILE_DEVICE));
         ServletContext context = request.getSession().getServletContext();
         GateCommand token = makeWebCommand(request, response, parameters);
         String domain = (String) context.getAttribute(KEY_AUTH_DOMAIN);
         if (domain == null) {
             Console console = getConsole(context);
-            AuthModule authModule = (AuthModule) console
-                    .getModule(Constants.MOD_AUTH);
+            AuthModule authModule = (AuthModule) console.getModule(Constants.MOD_AUTH);
             if (authModule.getGate(domain = token.getDomain()) == null) {
-                if (authModule.getGate(
-                        domain = console.getModuleName(token)) == null) {
+                if (authModule.getGate(domain = console.getModuleName(token)) == null) {
                     domain = "";
                 }
             }
@@ -205,8 +177,7 @@ public class BrickListener implements ServletContextListener {
         }
         /* 制作认证命令 */
         if (Strings.isNotEmpty(domain)) {
-            AuthCommand cmd = AuthHelper.toCommand(token.getIdentity(), domain,
-                    token);
+            AuthCommand cmd = AuthHelper.toCommand(token.getIdentity(), domain, token);
             cmd.setOperate(AuthCommand.OPERATE_CHECK);
             token = cmd;
         }
@@ -221,13 +192,11 @@ public class BrickListener implements ServletContextListener {
      * @param parameters
      * @return
      */
-    private static WebCommand makeWebCommand(HttpServletRequest request,
-            HttpServletResponse response, Map<String, Object> parameters) {
+    private static WebCommand makeWebCommand(HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) {
         ServletContext context = request.getSession().getServletContext();
         Container container = getConsole(context).getContainer();
         /* 获取网名 */
-        String webName = container.getInstance(String.class,
-                WebConstants.BRICK_WEB_NAME);
+        String webName = container.getInstance(String.class, WebConstants.BRICK_WEB_NAME);
         /* 获取命令 */
         WebCommand command = container.getInstance(WebCommand.class, webName);
         command.initial(request, response, parameters);
