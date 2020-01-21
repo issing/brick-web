@@ -15,7 +15,6 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 import net.isger.brick.ui.UICommand;
 import net.isger.brick.ui.UIConstants;
-import net.isger.util.Asserts;
 import net.isger.util.Files;
 import net.isger.util.Helpers;
 import net.isger.util.Strings;
@@ -42,29 +41,6 @@ public class WebCommand extends UICommand {
     @Ignore(mode = Mode.INCLUDE)
     private Charset encoding;
 
-    // @Alias(WebConstants.BRICK_UPLOAD_THRESHOLD)
-    // @Ignore(mode = Mode.INCLUDE)
-    // private Integer uploadThreshold;
-    //
-    // @Alias(WebConstants.BRICK_UPLOAD_FILESIZE)
-    // @Ignore(mode = Mode.INCLUDE)
-    // private Long uploadFileSize;
-    //
-    // @Alias(WebConstants.BRICK_UPLOAD_REQUESTSIZE)
-    // @Ignore(mode = Mode.INCLUDE)
-    // private Long uploadRequestSize;
-    //
-    // @Alias(WebConstants.BRICK_UPLOAD_PATH)
-    // @Ignore(mode = Mode.INCLUDE)
-    // private String uploadPath;
-
-    public WebCommand() {
-        // this.uploadThreshold = 1024 * 1024 * 4; // 4M
-        // this.uploadFileSize = 1024 * 1024 * 40l; // 40M
-        // this.uploadRequestSize = 1024 * 1024 * 40l; // 40M
-        // this.uploadPath = "upload";
-    }
-
     /**
      * 初始命令
      * 
@@ -77,6 +53,10 @@ public class WebCommand extends UICommand {
         this.response = response;
         makeTarget();
         makeParameters(parameters);
+        try {
+            setPayload(new String(Files.read(request.getInputStream()), encoding));
+        } catch (IOException e) {
+        }
     }
 
     /**
@@ -145,57 +125,11 @@ public class WebCommand extends UICommand {
         setParameter(result);
     }
 
-    /**
-     * 分部请求
-     */
-    // private void toMultipart() {
-    // DiskFileItemFactory factory = new DiskFileItemFactory();
-    // // 设置内存临界值 - 超过后将产生临时文件并存储于临时目录中
-    // factory.setSizeThreshold(uploadThreshold);
-    // // 设置临时存储目录
-    // factory.setRepository(new File(System.getProperty("java.io.tmpdir")));
-    // // 文件上传参数设置
-    // ServletFileUpload upload = new ServletFileUpload(factory);
-    // upload.setFileSizeMax(uploadFileSize);
-    // upload.setSizeMax(uploadRequestSize);
-    // File uploadDirectory = new File(uploadPath);
-    // if (!uploadDirectory.isAbsolute()) {
-    // uploadDirectory = new File(uploadPath = request.getSession()
-    // .getServletContext().getRealPath("./WEB-INF")
-    // + File.separator + uploadPath);
-    // }
-    // if (!uploadDirectory.exists()) {
-    // uploadDirectory.mkdirs();
-    // }
-    // try {
-    // // 解析请求的内容提取文件数据
-    // File storeFile;
-    // List<FileItem> formItems = upload.parseRequest(request);
-    // if (formItems.size() > 0) {
-    // // 迭代表单数据
-    // for (FileItem item : formItems) {
-    // // 处理不在表单中的字段
-    // if (!item.isFormField()) {
-    // storeFile = new File(uploadDirectory, new File(
-    // item.getName()).getName());
-    // // 保存文件到硬盘
-    // item.write(storeFile);
-    // // TODO 多文件上传问题
-    // setParameter(storeFile.getName(), storeFile);
-    // }
-    // }
-    // }
-    // } catch (Exception e) {
-    // throw new IllegalStateException("Failure to process "
-    // + request.getContentType(), e);
-    // }
-    // }
-
     private Object toEncoding(String charset, String... values) {
         int count = values.length;
         if (!encoding.name().equalsIgnoreCase(charset)) {
             for (int i = 0; i < count; i++) {
-                values[i] = "ISO-8859-1".equals(charset) ? values[i] : newString(charset, values[i]);
+                values[i] = "ISO-8859-1".equalsIgnoreCase(charset) ? values[i] : newString(charset, values[i]);
             }
         }
         return count == 1 ? values[0] : values;
@@ -216,36 +150,9 @@ public class WebCommand extends UICommand {
                 return (T) request;
             } else if ((BRICK_WEB_PREFIX + "response").equals(key)) {
                 return (T) response;
-            } else if ((BRICK_WEB_PREFIX + "content").equals(key)) {
-                return (T) getContent();
             }
         }
         return super.getHeader(key);
-    }
-
-    private String getContent() {
-        try {
-            return new String(Files.read(request.getInputStream()), encoding);
-        } catch (IOException e) {
-            throw Asserts.state(e.getMessage(), e.getCause());
-        }
-    }
-
-    public void setHeader(CharSequence key, Object value) {
-        if (String.valueOf(key).startsWith(BRICK_WEB_PREFIX)) {
-            if ((BRICK_WEB_PREFIX + "content").equals(key) && value != null) {
-                if (!(value instanceof byte[])) {
-                    value = String.valueOf(value).getBytes(encoding);
-                }
-                try {
-                    response.getOutputStream().write((byte[]) value);
-                } catch (IOException e) {
-                    throw Asserts.state(e.getMessage(), e.getCause());
-                }
-                return;
-            }
-        }
-        super.setHeader(key, value);
     }
 
 }

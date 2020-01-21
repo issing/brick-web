@@ -32,7 +32,7 @@ import net.isger.util.Strings;
 import net.isger.util.anno.Ignore;
 
 /**
- * Brick容器监听器
+ * 容器监听器
  * 
  * @author issing
  *
@@ -53,9 +53,9 @@ public class BrickListener implements ServletContextListener {
     /**
      * 初始上下文
      */
-    public void contextInitialized(ServletContextEvent event) {
+    public final void contextInitialized(ServletContextEvent event) {
         /* 初始容器 */
-        this.initial(event.getServletContext());
+        initial(event.getServletContext());
     }
 
     /**
@@ -112,7 +112,7 @@ public class BrickListener implements ServletContextListener {
     private void addContainerProviders(ConsoleManager manager, ServletContext context) {
         final String webName = getWebName(context);
         final String webPath = new File(context.getRealPath("./")).getAbsolutePath();
-        final Object wsc = context.getAttribute("javax.websocket.server.ServerContainer");
+        final Object webSocket = context.getAttribute("javax.websocket.server.ServerContainer");
         manager.addContainerProvider(new ContainerProvider() {
             public void register(ContainerBuilder builder) {
                 builder.constant(WebConstants.BRICK_WEB_NAME, webName);
@@ -120,8 +120,8 @@ public class BrickListener implements ServletContextListener {
                 builder.factory(WebCommand.class, webName);
                 builder.factory(Module.class, WebConstants.MOD_PLUGIN, UIPluginModule.class);
                 builder.factory(UIDesigner.class, WebConstants.MOD_PLUGIN);
-                if (wsc != null) {
-                    builder.constant((Class<Object>) Reflects.getClass("javax.websocket.server.ServerContainer"), Constants.SYSTEM, wsc);
+                if (webSocket != null) {
+                    builder.constant((Class<Object>) Reflects.getClass("javax.websocket.server.ServerContainer"), Constants.SYSTEM, webSocket);
                 }
             }
 
@@ -195,12 +195,12 @@ public class BrickListener implements ServletContextListener {
     private static WebCommand makeWebCommand(HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) {
         ServletContext context = request.getSession().getServletContext();
         Container container = getConsole(context).getContainer();
-        /* 获取网名 */
+        /* 网站名称 */
         String webName = container.getInstance(String.class, WebConstants.BRICK_WEB_NAME);
-        /* 获取命令 */
+        /* 初始命令 */
         WebCommand command = container.getInstance(WebCommand.class, webName);
         command.initial(request, response, parameters);
-        /* 设置权限会话 */
+        /* 权限会话 */
         command.setIdentity(WebIdentity.take(request));
         return command;
     }
@@ -208,7 +208,7 @@ public class BrickListener implements ServletContextListener {
     /**
      * 注销上下文
      */
-    public void contextDestroyed(ServletContextEvent event) {
+    public final void contextDestroyed(ServletContextEvent event) {
         destroy(event.getServletContext());
     }
 
