@@ -15,6 +15,7 @@ import org.apache.commons.fileupload.servlet.ServletFileUpload;
 
 import net.isger.brick.ui.UICommand;
 import net.isger.brick.ui.UIConstants;
+import net.isger.util.Asserts;
 import net.isger.util.Files;
 import net.isger.util.Helpers;
 import net.isger.util.Strings;
@@ -109,8 +110,7 @@ public class WebCommand extends UICommand {
                 result.put(name, toEncoding(charset, request.getParameterValues(name)));
             }
             if (ServletFileUpload.isMultipartContent(request)) {
-                // toMultipart();
-                throw new IllegalStateException("Unimplements multipart process");
+                throw Asserts.state("Unimplements multipart process");
             }
         } else {
             Object value;
@@ -150,6 +150,8 @@ public class WebCommand extends UICommand {
                 return (T) request;
             } else if ((BRICK_WEB_PREFIX + "response").equals(key)) {
                 return (T) response;
+            } else if ((BRICK_WEB_PREFIX + "remoteHost").equals(key)) {
+                return (T) request.getRemoteHost();
             }
         }
         return super.getHeader(key);
