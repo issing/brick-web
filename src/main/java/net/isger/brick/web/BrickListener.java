@@ -42,6 +42,8 @@ public class BrickListener implements ServletContextListener {
 
     private static final String REGEX_MOBILE_DEVICE = ".*(android|webos|ios|iphone|ipod|blackberry|phone).*";
 
+    private static final String WEBSOCKET_CONTAINER = "javax.websocket.server.ServerContainer";
+
     private static final String KEY_AUTH_DOMAIN = "brick.auth.domain";
 
     private static final Logger LOG;
@@ -63,7 +65,7 @@ public class BrickListener implements ServletContextListener {
      * 
      * @param context
      */
-    private synchronized void initial(ServletContext context) {
+    protected synchronized void initial(ServletContext context) {
         Asserts.throwState(context.getAttribute(WebConstants.BRICK_WEB_MANAGER) == null, "Cannot initialize console because there is already a Brick console manager present - %s", "check whether you have multiple definitions in your web.xml");
         context.log("Initializing Brick Console Manager");
         long startTime = System.currentTimeMillis();
@@ -112,7 +114,7 @@ public class BrickListener implements ServletContextListener {
     private void addContainerProviders(ConsoleManager manager, ServletContext context) {
         final String webName = getWebName(context);
         final String webPath = new File(context.getRealPath("./")).getAbsolutePath();
-        final Object webSocket = context.getAttribute("javax.websocket.server.ServerContainer");
+        final Object webSocket = context.getAttribute(WEBSOCKET_CONTAINER);
         manager.addContainerProvider(new ContainerProvider() {
             public void register(ContainerBuilder builder) {
                 builder.constant(WebConstants.BRICK_WEB_NAME, webName);
@@ -121,7 +123,7 @@ public class BrickListener implements ServletContextListener {
                 builder.factory(Module.class, WebConstants.MOD_PLUGIN, UIPluginModule.class);
                 builder.factory(UIDesigner.class, WebConstants.MOD_PLUGIN);
                 if (webSocket != null) {
-                    builder.constant((Class<Object>) Reflects.getClass("javax.websocket.server.ServerContainer"), Constants.SYSTEM, webSocket);
+                    builder.constant((Class<Object>) Reflects.getClass(WEBSOCKET_CONTAINER), Constants.SYSTEM, webSocket);
                 }
             }
 
@@ -164,16 +166,18 @@ public class BrickListener implements ServletContextListener {
         request.setAttribute(WebConstants.BRICK_WEB_MOBILE, request.getHeader("user-agent").toLowerCase().matches(REGEX_MOBILE_DEVICE));
         ServletContext context = request.getSession().getServletContext();
         GateCommand token = makeWebCommand(request, response, parameters);
-        String domain = (String) context.getAttribute(KEY_AUTH_DOMAIN);
-        if (domain == null) {
-            Console console = getConsole(context);
-            AuthModule authModule = (AuthModule) console.getModule(Constants.MOD_AUTH);
-            if (authModule.getGate(domain = token.getDomain()) == null) {
-                if (authModule.getGate(domain = console.getModuleName(token)) == null) {
-                    domain = "";
+        String domain = null;
+        synchronized (context) {
+            if ((domain = (String) context.getAttribute(KEY_AUTH_DOMAIN)) == null) {
+                Console console = getConsole(context);
+                AuthModule authModule = (AuthModule) console.getModule(Constants.MOD_AUTH);
+                if (authModule.getGate(domain = token.getDomain()) == null) {
+                    if (authModule.getGate(domain = console.getModuleName(token)) == null) {
+                        domain = "";
+                    }
                 }
+                context.setAttribute(KEY_AUTH_DOMAIN, domain);
             }
-            context.setAttribute(KEY_AUTH_DOMAIN, domain);
         }
         /* 制作认证命令 */
         if (Strings.isNotEmpty(domain)) {
@@ -217,7 +221,7 @@ public class BrickListener implements ServletContextListener {
      * 
      * @param context
      */
-    private synchronized void destroy(ServletContext context) {
+    protected synchronized void destroy(ServletContext context) {
         Console console = getConsole(context);
         if (console != null) {
             console.destroy();

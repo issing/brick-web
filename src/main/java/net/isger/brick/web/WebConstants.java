@@ -1,6 +1,14 @@
 package net.isger.brick.web;
 
-public interface WebConstants extends net.isger.brick.StandardConstants {
+import net.isger.brick.StandardConstants;
+
+/**
+ * 网络常量
+ * 
+ * @author issing
+ *
+ */
+public interface WebConstants extends StandardConstants {
 
     public static final String BRICK_WEB_MANAGER = "brick.web.manager";
 

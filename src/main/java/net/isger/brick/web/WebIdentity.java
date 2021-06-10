@@ -9,6 +9,12 @@ import net.isger.brick.auth.AuthIdentity;
 import net.isger.brick.auth.AuthToken;
 import net.isger.brick.core.BaseCommand;
 
+/**
+ * 网络身份
+ * 
+ * @author issing
+ *
+ */
 public class WebIdentity extends AuthIdentity {
 
     private HttpServletRequest request;
@@ -20,7 +26,7 @@ public class WebIdentity extends AuthIdentity {
     }
 
     public WebIdentity(AuthToken<?> token, HttpServletRequest request) {
-        super(token);
+        super(request.getSession().getId(), token);
         this.request = request;
         active(true);
     }
@@ -40,7 +46,9 @@ public class WebIdentity extends AuthIdentity {
     public void active(boolean create) {
         super.active(create);
         session = request.getSession(create);
-        session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
+        synchronized (session) {
+            session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
+        }
     }
 
     public void setTimeout(int timeout) {
@@ -56,13 +64,21 @@ public class WebIdentity extends AuthIdentity {
         session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
     }
 
+    /**
+     * 取出身份
+     * 
+     * @param request
+     * @return
+     */
     public static WebIdentity take(HttpServletRequest request) {
         HttpSession session = request.getSession();
-        WebIdentity identity = (WebIdentity) session.getAttribute(BaseCommand.CTRL_IDENTITY);
-        if (identity == null) {
-            identity = new WebIdentity(request);
+        synchronized (session) {
+            WebIdentity identity = (WebIdentity) session.getAttribute(BaseCommand.CTRL_IDENTITY);
+            if (identity == null) {
+                identity = new WebIdentity(request);
+            }
+            return identity;
         }
-        return identity;
     }
 
 }

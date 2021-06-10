@@ -28,7 +28,9 @@ public class WebCommand extends UICommand {
 
     public static final String BRICK_WEB_PREFIX = "brick-web:";
 
-    private static final String NAME_INDEX = "index";
+    private static final String ENCODING = "ISO-8859-1";
+
+    private static final String INDEX = "index";
 
     private HttpServletRequest request;
 
@@ -87,7 +89,7 @@ public class WebCommand extends UICommand {
         this.setDomain(domain);
 
         pending = (String[]) Helpers.newArray(path.split("!"), 2);
-        this.setName(Strings.empty(pending[0].replaceFirst("/", "").replaceAll("[/]", "."), NAME_INDEX));
+        this.setName(Strings.empty(pending[0].replaceFirst("/", "").replaceAll("[/]", "."), INDEX));
         this.setOperate(Strings.empty(pending[1], UIConstants.OPERATE_SCREEN));
     }
 
@@ -97,10 +99,7 @@ public class WebCommand extends UICommand {
      * @param parameters
      */
     protected void makeParameters(Map<String, Object> parameters) {
-        String charset = request.getCharacterEncoding();
-        if ("GET".equalsIgnoreCase(request.getMethod())) {
-            charset = "ISO-8859-1";
-        }
+        String charset = "GET".equalsIgnoreCase(request.getMethod()) ? ENCODING : request.getCharacterEncoding();
         /* 获取请求参数 */
         Map<String, Object> result = new HashMap<String, Object>();
         if (parameters == null) {
@@ -109,9 +108,7 @@ public class WebCommand extends UICommand {
                 String name = (String) names.nextElement();
                 result.put(name, toEncoding(charset, request.getParameterValues(name)));
             }
-            if (ServletFileUpload.isMultipartContent(request)) {
-                throw Asserts.state("Unimplements multipart process");
-            }
+            Asserts.throwState(!ServletFileUpload.isMultipartContent(request), "Unimplements multipart process");
         } else {
             Object value;
             for (Entry<String, Object> param : parameters.entrySet()) {
@@ -129,7 +126,7 @@ public class WebCommand extends UICommand {
         int count = values.length;
         if (!encoding.name().equalsIgnoreCase(charset)) {
             for (int i = 0; i < count; i++) {
-                values[i] = "ISO-8859-1".equalsIgnoreCase(charset) ? values[i] : newString(charset, values[i]);
+                values[i] = ENCODING.equalsIgnoreCase(charset) ? values[i] : newString(charset, values[i]);
             }
         }
         return count == 1 ? values[0] : values;
