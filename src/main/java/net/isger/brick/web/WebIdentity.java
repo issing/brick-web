@@ -43,9 +43,9 @@ public class WebIdentity extends AuthIdentity {
         }
     }
 
-    public void active(boolean create) {
-        super.active(create);
-        session = request.getSession(create);
+    public void active(boolean createable) {
+        super.active(createable);
+        session = request.getSession(createable);
         synchronized (session) {
             session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
         }

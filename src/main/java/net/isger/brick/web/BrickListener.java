@@ -181,7 +181,7 @@ public class BrickListener implements ServletContextListener {
         }
         /* 制作认证命令 */
         if (Strings.isNotEmpty(domain)) {
-            AuthCommand cmd = AuthHelper.toCommand(token.getIdentity(), domain, token);
+            AuthCommand cmd = AuthHelper.makeCommand(token.getIdentity(), domain, token);
             cmd.setOperate(AuthCommand.OPERATE_CHECK);
             token = cmd;
         }
