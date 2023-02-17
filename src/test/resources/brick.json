@@ -1,0 +1,23 @@
+{
+    "bus": {
+        "endpoints": {
+            "test": {
+                "class": "net.isger.brick.bus.TomcatEndpoint",
+                "host": "127.0.0.1",
+                "port": 8080,
+                "path": "/",
+                "viewers": {
+                    "json": "net.isger.web."
+                },
+                "parameters": {}
+            }
+        }
+    },
+    "plugin": {
+        "test": {
+            "screens": {
+                "path": "net.isger.brick.test.screen"
+            }
+        }
+    }
+}
