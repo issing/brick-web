@@ -57,9 +57,7 @@ public class TomcatEndpoint extends SocketEndpoint {
 
     private WebFilter filter;
 
-    private volatile boolean started;
-
-    private transient Airfone firfone;
+    private transient Airfone airfone;
 
     static {
         LOG = LoggerFactory.getLogger(TomcatEndpoint.class);
@@ -73,14 +71,15 @@ public class TomcatEndpoint extends SocketEndpoint {
 
     @Digest(stage = Stage.INITIAL)
     protected void install() {
-        console.addAirfone(firfone = new Airfone() {
-            public void ack(int action) {
+        console.addAirfone(airfone = new Airfone() {
+            public boolean ack(int action) {
                 if (action == Airfone.ACTION_DESTROY) {
-                    while (!started) {
+                    while (!isActive()) {
                         Helpers.sleep(200l);
                     }
                     tomcat.getServer().await();
                 }
+                return true;
             }
         });
     }
@@ -119,9 +118,8 @@ public class TomcatEndpoint extends SocketEndpoint {
             bind(tomcat.addWebapp(path, docPath.getAbsolutePath()));
             LOG.info("Listening [{}]", address);
             tomcat.start();
-            started = true;
         } catch (Exception e) {
-            console.remove(firfone);
+            console.remove(airfone);
             throw Asserts.state("Failure to bind [%s]", address, e);
         }
     }

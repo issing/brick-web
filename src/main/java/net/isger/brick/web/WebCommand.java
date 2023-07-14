@@ -165,8 +165,7 @@ public class WebCommand extends UICommand implements WebConfig {
     }
 
     public String getEncoding() {
-        // TODO Auto-generated method stub
-        return null;
+        return this.encoding.name();
     }
 
     /**
