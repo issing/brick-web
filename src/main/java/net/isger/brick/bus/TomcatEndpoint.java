@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
 import org.apache.catalina.connector.Connector;
+import org.apache.catalina.filters.CorsFilter;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.tomcat.util.descriptor.web.FilterDef;
 import org.apache.tomcat.util.descriptor.web.FilterMap;
@@ -51,6 +52,10 @@ public class TomcatEndpoint extends SocketEndpoint {
 
     private String view;
 
+    private String corsOrigins;
+
+    private TomcatSSLConfig ssl;
+
     private boolean reload;
 
     private WebInitializer initializer;
@@ -64,20 +69,20 @@ public class TomcatEndpoint extends SocketEndpoint {
     }
 
     public TomcatEndpoint() {
-        tomcat = new Tomcat();
-        path = "";
-        view = "json";
+        this.tomcat = new Tomcat();
+        this.path = "";
+        this.view = "json";
     }
 
     @Digest(stage = Stage.INITIAL)
     protected void install() {
-        console.addAirfone(airfone = new Airfone() {
+        this.console.addAirfone(this.airfone = new Airfone() {
             public boolean ack(int action) {
                 if (action == Airfone.ACTION_DESTROY) {
                     while (!isActive()) {
                         Helpers.sleep(200l);
                     }
-                    tomcat.getServer().await();
+                    TomcatEndpoint.this.tomcat.getServer().await();
                 }
                 return true;
             }
@@ -101,6 +106,9 @@ public class TomcatEndpoint extends SocketEndpoint {
             Connector connector = new Connector();
             connector.setPort(address.getPort());
             tomcat.getService().addConnector(connector);
+            if (ssl != null) {
+                tomcat.getService().addConnector(ssl.getConnector());
+            }
             tomcat.setConnector(connector);
             tomcat.getHost().setAutoDeploy(reload);
             File workPath = Files.getFile(baseDir, "webapps");
@@ -133,16 +141,29 @@ public class TomcatEndpoint extends SocketEndpoint {
             context.addParameter(parameter.getKey(), Strings.empty(parameter.getValue()));
         }
         context.addServletContainerInitializer(initializer == null ? initializer = new WebInitializer(context, console) : initializer, null);
-        /* 内置过滤器 */
-        FilterDef define = new FilterDef();
-        define.setFilterName(Constants.BRICK);
-        define.setFilter(filter == null ? filter = new WebFilter() : filter);
-        FilterMap mapper = new FilterMap();
-        mapper.setFilterName(Constants.BRICK);
-        mapper.addURLPattern("/*");
-        mapper.setCharset(encoding);
-        context.addFilterDef(define);
-        context.addFilterMap(mapper);
+        /* 内置跨域过滤器 */
+        if (Strings.isNotEmpty(corsOrigins)) {
+            FilterDef corsDefine = new FilterDef();
+            corsDefine.setFilterName("cors");
+            corsDefine.setFilter(new CorsFilter());
+            corsDefine.addInitParameter(CorsFilter.PARAM_CORS_ALLOWED_ORIGINS, corsOrigins);
+            FilterMap corsMapper = new FilterMap();
+            corsMapper.setFilterName("cors");
+            corsMapper.addURLPattern("/*");
+            corsMapper.setCharset(encoding);
+            context.addFilterDef(corsDefine);
+            context.addFilterMap(corsMapper);
+        }
+        /* 内置服务过滤器 */
+        FilterDef brickDefine = new FilterDef();
+        brickDefine.setFilterName(Constants.BRICK);
+        brickDefine.setFilter(filter == null ? filter = new WebFilter() : filter);
+        FilterMap brickMapper = new FilterMap();
+        brickMapper.setFilterName(Constants.BRICK);
+        brickMapper.addURLPattern("/*");
+        brickMapper.setCharset(encoding);
+        context.addFilterDef(brickDefine);
+        context.addFilterMap(brickMapper);
     }
 
     protected void close() {
