@@ -19,6 +19,7 @@ public class DefaultHitch {
         }
         Viewers.addViewer(new PlainViewer());
         Viewers.addViewer(new JsonViewer());
+        Viewers.addViewer(new RedirectViewer());
     }
 
 }

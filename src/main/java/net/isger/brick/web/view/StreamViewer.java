@@ -13,7 +13,7 @@ import net.isger.brick.ui.Screen;
 
 public class StreamViewer extends AbstractViewer {
 
-    public void render(Object content, HttpServletRequest request, HttpServletResponse response) {
+    public void render(Screen content, HttpServletRequest request, HttpServletResponse response) {
 
     }
 

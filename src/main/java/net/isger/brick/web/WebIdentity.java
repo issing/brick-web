@@ -13,7 +13,6 @@ import net.isger.brick.core.BaseCommand;
  * 网络身份
  * 
  * @author issing
- *
  */
 public class WebIdentity extends AuthIdentity {
 
@@ -21,47 +20,54 @@ public class WebIdentity extends AuthIdentity {
 
     private HttpSession session;
 
+    protected WebIdentity() {
+    }
+
     public WebIdentity(HttpServletRequest request) {
         this(null, request);
     }
 
     public WebIdentity(AuthToken<?> token, HttpServletRequest request) {
         super(request.getSession().getId(), token);
+        this.initial(null, request);
+    }
+
+    protected void initial(WebCommand command, HttpServletRequest request) {
         this.request = request;
-        active(true);
+        this.active(true);
     }
 
     public Object getAttribute(String name) {
-        return session.getAttribute(name);
+        return this.session.getAttribute(name);
     }
 
     public void setAttribute(String name, Object value) {
         if (value == null) {
-            session.removeAttribute(name);
+            this.session.removeAttribute(name);
         } else {
-            session.setAttribute(name, value);
+            this.session.setAttribute(name, value);
         }
     }
 
     public void active(boolean createable) {
         super.active(createable);
-        session = request.getSession(createable);
-        synchronized (session) {
-            session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
+        this.session = this.request.getSession(createable);
+        synchronized (this.session) {
+            this.session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
         }
     }
 
     public void setTimeout(int timeout) {
-        session.setMaxInactiveInterval(timeout);
+        this.session.setMaxInactiveInterval(timeout);
     }
 
     public void clear() {
         super.clear();
-        Enumeration<?> es = session.getAttributeNames();
+        Enumeration<?> es = this.session.getAttributeNames();
         while (es.hasMoreElements()) {
-            session.removeAttribute((String) es.nextElement());
+            this.session.removeAttribute((String) es.nextElement());
         }
-        session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
+        this.session.setAttribute(BaseCommand.CTRL_IDENTITY, this);
     }
 
     /**
@@ -70,13 +76,11 @@ public class WebIdentity extends AuthIdentity {
      * @param request
      * @return
      */
-    public static WebIdentity take(HttpServletRequest request) {
+    public static WebIdentity obtain(HttpServletRequest request) {
         HttpSession session = request.getSession();
         synchronized (session) {
             WebIdentity identity = (WebIdentity) session.getAttribute(BaseCommand.CTRL_IDENTITY);
-            if (identity == null) {
-                identity = new WebIdentity(request);
-            }
+            if (identity == null) identity = new WebIdentity(request);
             return identity;
         }
     }

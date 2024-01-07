@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import net.isger.brick.auth.AuthCommand;
 import net.isger.brick.core.BaseCommand;
+import net.isger.brick.core.Console;
 import net.isger.brick.ui.Screen;
 import net.isger.brick.util.WebHelpers;
 import net.isger.brick.web.view.Viewers;
@@ -33,39 +34,34 @@ public class WebFilter implements Filter {
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) req;
         HttpServletResponse response = (HttpServletResponse) resp;
+        ServletContext context = request.getSession().getServletContext();
         if (!WebCommand.isAction(request)) {
             chain.doFilter(request, response);
             return;
         }
+        Console console = WebHelpers.getConsole(context);
         /* 生成命令 */
         BaseCommand cmd;
         try {
-            cmd = WebCommand.makeCommand(request, response);
+            cmd = WebCommand.makeCommand(console, request, response);
         } catch (Exception e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.warn("(!) Invalid request [{}]", request.getRequestURI(), e);
-            }
-            Viewers.render("failure", e, request, response);
+            if (LOG.isDebugEnabled()) LOG.warn("(!) Invalid request [{}]", request.getRequestURI(), e);
+            Viewers.render("failure", WebFailure.newScreen(e), request, response);
             return;
         }
         /* 执行命令 */
-        ServletContext context = request.getSession().getServletContext();
         try {
-            WebHelpers.getConsole(context).execute(cmd);
+            console.execute(cmd);
         } catch (Exception e) {
-            if (LOG.isDebugEnabled()) {
-                LOG.warn("(!) Failure to process [{}]", WebCommand.getDomain(cmd), WebCommand.getName(cmd), e);
-            }
-            Viewers.render("failure", e, request, response);
+            if (LOG.isDebugEnabled()) LOG.warn("(!) Failure to process [{}:{}]", WebCommand.getDomain(cmd), WebCommand.getName(cmd), e);
+            Viewers.render("failure", WebFailure.newScreen(e), request, response);
             return;
         }
         String view = Strings.empty(context.getAttribute(WebConstants.BRICK_WEB_VIEW));
         Object result = cmd.getResult();
         /* 授权访问 */
         if (cmd instanceof AuthCommand) {
-            if (!Helpers.toBoolean(result)) {
-                view = "unauth";
-            }
+            if (!Helpers.toBoolean(result)) view = "unauth";
             result = ((BaseCommand) ((AuthCommand) cmd).getToken()).getResult();
         }
         /* 界面导向 */
@@ -73,18 +69,13 @@ public class WebFilter implements Filter {
         String name;
         if (result instanceof Screen) {
             screen = (Screen) result;
-            if (screen.see("@stream") != null) {
-                name = "stream";
-            } else {
+            if (screen.see("@stream") != null) name = "stream";
+            else {
                 name = (String) screen.see("@name");
-                if (name == null) {
-                    name = "plain";
-                    result = screen.see("result");
-                } else {
-                    name = Strings.empty(name, view); // 空字符串替换为默认值
-                }
+                if (name == null) name = "plain";
+                else name = Strings.empty(name, view); // 空字符串替换为默认值
             }
-            Viewers.render(name, result, request, response);
+            Viewers.render(name, screen, request, response);
         }
     }
 

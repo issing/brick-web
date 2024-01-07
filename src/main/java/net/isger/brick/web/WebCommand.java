@@ -24,7 +24,6 @@ import net.isger.brick.core.GateCommand;
 import net.isger.brick.inject.Container;
 import net.isger.brick.ui.UICommand;
 import net.isger.brick.ui.UIConstants;
-import net.isger.brick.util.WebHelpers;
 import net.isger.util.Files;
 import net.isger.util.Helpers;
 import net.isger.util.Strings;
@@ -60,7 +59,19 @@ public class WebCommand extends UICommand implements WebConfig {
      * @return
      */
     public static boolean isAction(HttpServletRequest request) {
-        return !request.getRequestURI().contains(".");
+        return !(request.getRequestURI().contains(".") || isWebSocket(request));
+    }
+
+    /**
+     * 网络套接字
+     * 
+     * @param request
+     * @return
+     */
+    public static boolean isWebSocket(HttpServletRequest request) {
+        String upgradeHeader = request.getHeader("Upgrade");
+        String connectionHeader = request.getHeader("Connection");
+        return (upgradeHeader != null && upgradeHeader.toLowerCase().contains("websocket")) && (connectionHeader != null && connectionHeader.toLowerCase().contains("upgrade"));
     }
 
     /**
@@ -71,27 +82,27 @@ public class WebCommand extends UICommand implements WebConfig {
      * @return
      * @throws Exception
      */
-    public static BaseCommand makeCommand(HttpServletRequest request, HttpServletResponse response) throws Exception {
-        return makeCommand(request, response, null);
+    public static BaseCommand makeCommand(Console console, HttpServletRequest request, HttpServletResponse response) throws Exception {
+        return makeCommand(console, request, response, null);
     }
 
     /**
      * 访问命令（根据应用配置情况做认证包装）
      * 
+     * @param console
      * @param request
      * @param response
      * @param parameters
      * @return
      * @throws Exception
      */
-    public static BaseCommand makeCommand(HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) throws Exception {
+    public static BaseCommand makeCommand(Console console, HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) throws Exception {
         request.setAttribute(WebConstants.KEY_MOBILE, request.getHeader("user-agent").toLowerCase().matches(REGEX_MOBILE_DEVICE));
         ServletContext context = request.getSession().getServletContext();
-        GateCommand token = makeWebCommand(request, response, parameters);
+        GateCommand token = makeWebCommand(console, request, response, parameters);
         String domain = null;
         synchronized (context) {
             if ((domain = (String) context.getAttribute(KEY_AUTH_DOMAIN)) == null) {
-                Console console = WebHelpers.getConsole(context);
                 AuthModule authModule = (AuthModule) console.getModule(Constants.MOD_AUTH);
                 if (authModule.getGate(domain = token.getDomain()) == null) {
                     if (authModule.getGate(domain = console.getModuleName(token)) == null) {
@@ -113,20 +124,26 @@ public class WebCommand extends UICommand implements WebConfig {
     /**
      * 访问命令
      * 
+     * @param console
      * @param request
      * @param response
      * @param parameters
      * @return
      * @throws Exception
      */
-    private static WebCommand makeWebCommand(HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) throws Exception {
-        ServletContext context = request.getSession().getServletContext();
-        Container container = WebHelpers.getConsole(context).getContainer();
+    private static WebCommand makeWebCommand(Console console, HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) throws Exception {
+        Container container = console.getContainer();
         /* 初始命令 */
         WebCommand command = container.getInstance(WebCommand.class, WebConstants.WEB);
         command.initial(request, response, parameters);
-        /* 权限会话 */
-        command.setIdentity(WebIdentity.take(request));
+        /* 访问身份 */
+        WebIdentity identity = container.getInstance(WebIdentity.class, WebConstants.WEB);
+        if (identity == null) {
+            identity = WebIdentity.obtain(request);
+        } else {
+            identity.initial(command, request);
+        }
+        command.setIdentity(identity);
         return command;
     }
 
@@ -142,25 +159,23 @@ public class WebCommand extends UICommand implements WebConfig {
         this.request = request;
         this.response = response;
         makeTarget();
+        makeHeader();
         makeParameters(parameters);
         try {
-            setPayload(new String(Files.read(request.getInputStream()), encoding));
+            setPayload(new String(Files.read(request.getInputStream()), this.encoding));
         } catch (IOException e) {
         }
     }
 
     public int getMemoryThreshold() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     public long getMaxFileSize() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
     public long getMaxRequestSize() {
-        // TODO Auto-generated method stub
         return 0;
     }
 
@@ -170,9 +185,6 @@ public class WebCommand extends UICommand implements WebConfig {
 
     /**
      * 生成目标
-     * 
-     * @param request
-     * @return
      */
     protected void makeTarget() {
         String domain;
@@ -195,10 +207,25 @@ public class WebCommand extends UICommand implements WebConfig {
             path = path.substring(contextPath.length());
         }
         this.setDomain(domain);
-
         pending = (String[]) Helpers.newArray(path.split("!"), 2);
         this.setName(Strings.empty(pending[0].replaceFirst("/", "").replaceAll("[/]", "."), INDEX));
         this.setOperate(Strings.empty(pending[1], UIConstants.OPERATE_SCREEN));
+    }
+
+    /**
+     * 生成头部
+     */
+    protected void makeHeader() {
+        String charset = "GET".equalsIgnoreCase(request.getMethod()) ? ENCODING : Strings.empty(request.getCharacterEncoding(), encoding.name());
+        /* 获取头部参数 */
+        Map<String, Object> result = new HashMap<String, Object>();
+        Enumeration<String> names = request.getHeaderNames();
+        String name;
+        while (names.hasMoreElements()) {
+            name = names.nextElement();
+            result.put("web." + name, toEncoding(charset, request.getHeader(name)));
+        }
+        setHeader(result);
     }
 
     /**
@@ -212,9 +239,10 @@ public class WebCommand extends UICommand implements WebConfig {
         /* 获取请求参数 */
         Map<String, Object> result = new HashMap<String, Object>();
         if (parameters == null) {
-            Enumeration<?> names = request.getParameterNames();
+            Enumeration<String> names = request.getParameterNames();
+            String name;
             while (names.hasMoreElements()) {
-                String name = (String) names.nextElement();
+                name = names.nextElement();
                 result.put(name, toEncoding(charset, request.getParameterValues(name)));
             }
             if (ServletFileUpload.isMultipartContent(request)) {
@@ -254,13 +282,10 @@ public class WebCommand extends UICommand implements WebConfig {
     @SuppressWarnings("unchecked")
     public <T> T getHeader(CharSequence key) {
         if (String.valueOf(key).startsWith(BRICK_WEB_PREFIX)) {
-            if ((BRICK_WEB_PREFIX + "request").equals(key)) {
-                return (T) request;
-            } else if ((BRICK_WEB_PREFIX + "response").equals(key)) {
-                return (T) response;
-            } else if ((BRICK_WEB_PREFIX + "remoteHost").equals(key)) {
-                return (T) request.getRemoteHost();
-            }
+            if ((BRICK_WEB_PREFIX + "request").equals(key)) return (T) this.request;
+            else if ((BRICK_WEB_PREFIX + "response").equals(key)) return (T) this.response;
+            else if ((BRICK_WEB_PREFIX + "remoteHost").equals(key)) return (T) this.request.getRemoteHost();
+            else key = key.subSequence(BRICK_WEB_PREFIX.length(), key.length());
         }
         return super.getHeader(key);
     }

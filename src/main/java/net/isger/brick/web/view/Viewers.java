@@ -9,6 +9,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import net.isger.brick.ui.Screen;
 import net.isger.util.hitch.Director;
 
 public class Viewers {
@@ -41,24 +42,18 @@ public class Viewers {
 
     public static void addViewer(Viewer viewer) {
         String name = viewer.name();
-        if (LOG.isDebugEnabled()) {
-            LOG.info("Achieve viewer [{}]", name);
-        }
+        if (LOG.isDebugEnabled()) LOG.info("Achieve viewer [{}]", name);
         viewer = INSTANCE.viewers.put(name, viewer);
-        if (viewer != null && LOG.isDebugEnabled()) {
-            LOG.warn("(!) Discard viewer [{}]", viewer);
-        }
+        if (viewer != null && LOG.isDebugEnabled()) LOG.warn("(!) Discard viewer [{}]", viewer);
     }
 
     public static Viewer getViewer(String name) {
         return INSTANCE.viewers.get(name);
     }
 
-    public static void render(String name, Object content, HttpServletRequest request, HttpServletResponse response) {
+    public static void render(String name, Screen screen, HttpServletRequest request, HttpServletResponse response) {
         Viewer viewer = getViewer(name);
-        if (viewer != null) {
-            viewer.render(content, request, response);
-        }
+        if (viewer != null) viewer.render(screen, request, response);
     }
 
 }

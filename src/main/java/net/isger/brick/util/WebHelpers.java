@@ -51,9 +51,7 @@ public class WebHelpers {
         Console console = (Console) context.getAttribute(WebConstants.BRICK_WEB_CONSOLE);
         if (console == null) {
             ConsoleManager manager = getManager(context);
-            if (manager != null) {
-                setConsole(context, console = manager.getConsole());
-            }
+            if (manager != null) setConsole(context, console = manager.getConsole());
         }
         return console;
     }
