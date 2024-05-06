@@ -46,8 +46,8 @@ public class TomcatEndpoint extends SocketEndpoint {
     protected Console console;
 
     @Alias(WebConstants.BRICK_ENCODING)
-    @Ignore(mode = Mode.INCLUDE)
-    private Charset encoding;
+    @Ignore(mode = Mode.INCLUDE, serialize = false)
+    private String encoding;
 
     private String baseDir;
 
@@ -84,7 +84,7 @@ public class TomcatEndpoint extends SocketEndpoint {
         this.console.addAirfone(this.airfone = new Airfone() {
             public boolean ack(int action) {
                 if (action == Airfone.ACTION_DESTROY) {
-                    while (!isActive()) Helpers.sleep(200l);
+                    while (!hasReady()) Helpers.sleep(200l);
                     TomcatEndpoint.this.tomcat.getServer().await();
                 }
                 return true;
@@ -114,12 +114,12 @@ public class TomcatEndpoint extends SocketEndpoint {
             if (!workPath.exists()) workPath.mkdirs();
             File docPath = new File(workPath, name());
             if (!docPath.exists()) docPath.mkdirs();
-            while (!this.console.hasReady()) Helpers.sleep(200l); // 等待控制台就绪
             this.bind(this.tomcat.addWebapp(this.path, docPath.getAbsolutePath()));
             LOG.info("Listening [{}]", address);
+            this.toActive();
             this.tomcat.start();
         } catch (Exception e) {
-            console.remove(airfone);
+            this.console.remove(this.airfone);
             throw Asserts.state("Failure to bind [%s]", address, e);
         }
     }
@@ -129,7 +129,7 @@ public class TomcatEndpoint extends SocketEndpoint {
         ConstantStrategy.set(this.container, Context.class, WebConstants.WEB, context);
         context.addParameter(WebConstants.BRICK_WEB_NAME, name());
         context.addParameter(WebConstants.BRICK_WEB_VIEW, this.view);
-        context.addParameter(Constants.BRICK_ENCODING, this.encoding.name());
+        context.addParameter(Constants.BRICK_ENCODING, this.encoding);
         for (Entry<String, Object> parameter : getParameters().entrySet()) context.addParameter(parameter.getKey(), Strings.empty(parameter.getValue()));
         context.addServletContainerInitializer(this.initializer == null ? this.container.inject(this.initializer = new WebInitializer()) : this.initializer, null);
         if (this.lifecycles != null) for (LifecycleListener lifecycle : this.lifecycles) context.addLifecycleListener(lifecycle);
@@ -142,7 +142,7 @@ public class TomcatEndpoint extends SocketEndpoint {
             FilterMap corsMapper = new FilterMap();
             corsMapper.setFilterName("cors");
             corsMapper.addURLPattern("/*");
-            corsMapper.setCharset(this.encoding);
+            corsMapper.setCharset(Charset.forName(this.encoding));
             context.addFilterDef(corsDefine);
             context.addFilterMap(corsMapper);
         }
@@ -153,7 +153,7 @@ public class TomcatEndpoint extends SocketEndpoint {
         FilterMap brickMapper = new FilterMap();
         brickMapper.setFilterName(Constants.BRICK);
         brickMapper.addURLPattern("/*");
-        brickMapper.setCharset(this.encoding);
+        brickMapper.setCharset(Charset.forName(this.encoding));
         context.addFilterDef(brickDefine);
         context.addFilterMap(brickMapper);
     }

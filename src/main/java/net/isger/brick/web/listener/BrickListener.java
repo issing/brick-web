@@ -110,6 +110,8 @@ public class BrickListener implements ServletContextListener {
         context.setAttribute(WebConstants.BRICK_WEB_PATH, webPath);
         manager.addContainerProvider(new ContainerProvider() {
             public void register(ContainerBuilder builder) {
+                builder.constant(String.class, WebConstants.BRICK_WEB_NAME, webName);
+                builder.constant(String.class, WebConstants.BRICK_WEB_PATH, webPath);
                 builder.factory(WebCommand.class, WebConstants.WEB);
                 builder.factory(Module.class, WebConstants.MOD_PLUGIN, UIPluginModule.class);
                 builder.factory(UIDesigner.class, WebConstants.MOD_PLUGIN);

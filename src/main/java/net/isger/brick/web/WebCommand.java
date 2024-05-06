@@ -2,7 +2,6 @@ package net.isger.brick.web;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
@@ -36,6 +35,8 @@ public class WebCommand extends UICommand implements WebConfig {
 
     public static final String BRICK_WEB_PREFIX = "brick-web:";
 
+    private static final String KEY_USER_AGENT = "user-agent";
+
     private static final String REGEX_MOBILE_DEVICE = ".*(android|webos|ios|iphone|ipod|blackberry|phone).*";
 
     private static final String KEY_AUTH_DOMAIN = "brick.auth.domain";
@@ -49,8 +50,8 @@ public class WebCommand extends UICommand implements WebConfig {
     private HttpServletResponse response;
 
     @Alias(WebConstants.BRICK_ENCODING)
-    @Ignore(mode = Mode.INCLUDE)
-    private Charset encoding;
+    @Ignore(mode = Mode.INCLUDE, serialize = false)
+    private String encoding;
 
     /**
      * 请求检测
@@ -97,7 +98,7 @@ public class WebCommand extends UICommand implements WebConfig {
      * @throws Exception
      */
     public static BaseCommand makeCommand(Console console, HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) throws Exception {
-        request.setAttribute(WebConstants.KEY_MOBILE, request.getHeader("user-agent").toLowerCase().matches(REGEX_MOBILE_DEVICE));
+        request.setAttribute(WebConstants.KEY_MOBILE, request.getHeader(KEY_USER_AGENT).toLowerCase().matches(REGEX_MOBILE_DEVICE));
         ServletContext context = request.getSession().getServletContext();
         GateCommand token = makeWebCommand(console, request, response, parameters);
         String domain = null;
@@ -158,11 +159,11 @@ public class WebCommand extends UICommand implements WebConfig {
     void initial(HttpServletRequest request, HttpServletResponse response, Map<String, Object> parameters) throws Exception {
         this.request = request;
         this.response = response;
-        makeTarget();
-        makeHeader();
-        makeParameters(parameters);
+        this.makeHeader();
+        this.makeTarget();
+        this.makeParameters(parameters);
         try {
-            setPayload(new String(Files.read(request.getInputStream()), this.encoding));
+            this.setPayload(new String(Files.read(request.getInputStream()), this.encoding));
         } catch (IOException e) {
         }
     }
@@ -180,7 +181,7 @@ public class WebCommand extends UICommand implements WebConfig {
     }
 
     public String getEncoding() {
-        return this.encoding.name();
+        return this.encoding;
     }
 
     /**
@@ -216,16 +217,16 @@ public class WebCommand extends UICommand implements WebConfig {
      * 生成头部
      */
     protected void makeHeader() {
-        String charset = "GET".equalsIgnoreCase(request.getMethod()) ? ENCODING : Strings.empty(request.getCharacterEncoding(), encoding.name());
+        String charset = "GET".equalsIgnoreCase(request.getMethod()) ? ENCODING : Strings.empty(request.getCharacterEncoding(), this.encoding);
         /* 获取头部参数 */
         Map<String, Object> result = new HashMap<String, Object>();
-        Enumeration<String> names = request.getHeaderNames();
+        Enumeration<String> names = this.request.getHeaderNames();
         String name;
         while (names.hasMoreElements()) {
             name = names.nextElement();
-            result.put("web." + name, toEncoding(charset, request.getHeader(name)));
+            result.put(name, toEncoding(charset, this.request.getHeader(name)));
         }
-        setHeader(result);
+        this.setHeader(result);
     }
 
     /**
@@ -235,7 +236,7 @@ public class WebCommand extends UICommand implements WebConfig {
      * @throws Exception
      */
     protected void makeParameters(Map<String, Object> parameters) throws Exception {
-        String charset = "GET".equalsIgnoreCase(request.getMethod()) ? ENCODING : Strings.empty(request.getCharacterEncoding(), encoding.name());
+        String charset = "GET".equalsIgnoreCase(request.getMethod()) ? ENCODING : Strings.empty(request.getCharacterEncoding(), encoding);
         /* 获取请求参数 */
         Map<String, Object> result = new HashMap<String, Object>();
         if (parameters == null) {
@@ -263,7 +264,7 @@ public class WebCommand extends UICommand implements WebConfig {
 
     private Object toEncoding(String charset, String... values) {
         int count = values.length;
-        if (!encoding.name().equalsIgnoreCase(charset)) {
+        if (!encoding.equalsIgnoreCase(charset)) {
             for (int i = 0; i < count; i++) {
                 values[i] = ENCODING.equalsIgnoreCase(charset) ? values[i] : newString(charset, values[i]);
             }

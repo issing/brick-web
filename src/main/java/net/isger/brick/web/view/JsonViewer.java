@@ -13,7 +13,7 @@ import net.isger.util.Strings;
 public class JsonViewer extends AbstractViewer {
 
     public void render(Screen screen, HttpServletRequest request, HttpServletResponse response) {
-        response.setContentType("application/json; charset=" + Strings.empty(request.getSession().getServletContext().getAttribute(Constants.BRICK_ENCODING), Constants.ENC_UTF8));
+        response.setContentType("application/json; charset=" + Strings.empty(request.getSession().getServletContext().getAttribute(Constants.BRICK_ENCODING), Constants.ENCODING_UTF_8));
         try {
             response.getWriter().print(Helpers.toJson(Helpers.toBoolean(screen.see("@expose")) ? screen.see("result") : screen, true));
         } catch (IOException e) {

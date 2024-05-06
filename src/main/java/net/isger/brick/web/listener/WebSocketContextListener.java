@@ -33,15 +33,15 @@ public class WebSocketContextListener implements LifecycleListener {
         if (event.getType().equals(Lifecycle.AFTER_START_EVENT)) {
             if (event.getSource() instanceof StandardContext) {
                 StandardContext context = (StandardContext) event.getSource();
-                ServerContainer serverContainer = (ServerContainer) context.getServletContext().getAttribute(ServerContainer.class.getName());
-                Asserts.throwState(serverContainer != null, "No implementation class found for %s", ServerContainer.class.getName());
+                ServerContainer container = (ServerContainer) context.getServletContext().getAttribute(ServerContainer.class.getName());
+                Asserts.throwState(container != null, "No implementation class found for %s", ServerContainer.class.getName());
                 /* 注册端点 */
                 if (this.tunnel != null) {
                     for (Entry<String, ServerEndpointConfig> entry : this.tunnel.gets().entrySet()) {
                         ServerEndpointConfig config = entry.getValue();
                         try {
                             if (LOG.isDebugEnabled()) LOG.info("Deployment [{}] WebSocket [{}]", config.getPath(), config.getEndpointClass().getName());
-                            serverContainer.addEndpoint(config); // 该配置优先级低于注解方式（可能不生效）
+                            container.addEndpoint(config); // 该配置优先级低于注解方式（可能不生效）
                         } catch (DeploymentException e) {
                             throw Asserts.state(e.getMessage(), e.getCause());
                         }

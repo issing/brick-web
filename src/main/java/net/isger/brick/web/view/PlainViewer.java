@@ -13,7 +13,7 @@ public class PlainViewer extends AbstractViewer {
 
     public void render(Screen screen, HttpServletRequest request, HttpServletResponse response) {
         if (screen != null) {
-            response.setContentType("text/plain; charset=" + Strings.empty(request.getSession().getServletContext().getAttribute(Constants.BRICK_ENCODING), Constants.ENC_UTF8));
+            response.setContentType("text/plain; charset=" + Strings.empty(request.getSession().getServletContext().getAttribute(Constants.BRICK_ENCODING), Constants.ENCODING_UTF_8));
             try {
                 response.getWriter().print(screen.see("result"));
             } catch (IOException e) {

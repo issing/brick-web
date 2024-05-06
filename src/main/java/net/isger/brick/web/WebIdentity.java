@@ -16,9 +16,9 @@ import net.isger.brick.core.BaseCommand;
  */
 public class WebIdentity extends AuthIdentity {
 
-    private HttpServletRequest request;
+    private transient HttpServletRequest request;
 
-    private HttpSession session;
+    private transient HttpSession session;
 
     protected WebIdentity() {
     }
