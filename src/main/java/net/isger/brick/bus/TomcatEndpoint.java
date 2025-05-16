@@ -40,7 +40,9 @@ public class TomcatEndpoint extends SocketEndpoint {
 
     private transient Tomcat tomcat;
 
-    /** 控制台 */
+    /**
+     * 控制台
+     */
     @Ignore(mode = Mode.INCLUDE)
     @Alias(Constants.SYSTEM)
     protected Console console;
@@ -97,7 +99,8 @@ public class TomcatEndpoint extends SocketEndpoint {
      */
     protected final void open() {
         super.open();
-        if (Strings.isEmpty(this.baseDir)) this.baseDir = Files.toPath(this.console.getContainer().getInstance(String.class, Constants.BRICK_PATH), ".brick/tomcat");
+        if (Strings.isEmpty(this.baseDir))
+            this.baseDir = Files.toPath(this.console.getContainer().getInstance(String.class, Constants.BRICK_PATH), ".brick/tomcat");
         this.path = Strings.replaceIgnoreCase(this.path, "[/\\\\]+$");
         /* 绑定服务端口 */
         InetSocketAddress address = getAddress();
@@ -130,9 +133,11 @@ public class TomcatEndpoint extends SocketEndpoint {
         context.addParameter(WebConstants.BRICK_WEB_NAME, name());
         context.addParameter(WebConstants.BRICK_WEB_VIEW, this.view);
         context.addParameter(Constants.BRICK_ENCODING, this.encoding);
-        for (Entry<String, Object> parameter : getParameters().entrySet()) context.addParameter(parameter.getKey(), Strings.empty(parameter.getValue()));
+        for (Entry<String, Object> parameter : getParameters().entrySet())
+            context.addParameter(parameter.getKey(), Strings.empty(parameter.getValue()));
         context.addServletContainerInitializer(this.initializer == null ? this.container.inject(this.initializer = new WebInitializer()) : this.initializer, null);
-        if (this.lifecycles != null) for (LifecycleListener lifecycle : this.lifecycles) context.addLifecycleListener(lifecycle);
+        if (this.lifecycles != null)
+            for (LifecycleListener lifecycle : this.lifecycles) context.addLifecycleListener(lifecycle);
         /* 内置跨域过滤器 */
         if (Strings.isNotEmpty(this.cors)) {
             FilterDef corsDefine = new FilterDef();
